@@ -3,6 +3,7 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
     @Query private var plans: [QuitPlan]
     var body: some View {
         Group {
@@ -10,6 +11,10 @@ struct RootView: View {
             else { MainTabView(plan: plans[0]) }
         }
         .task { await OutboxService.flush(context: context) }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task { await OutboxService.flush(context: context) }
+        }
     }
 }
 
