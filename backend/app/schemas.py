@@ -1,7 +1,25 @@
-from datetime import datetime
-from typing import Literal
+from datetime import UTC, datetime
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer
+
+
+def _serialize_utc(value: datetime) -> str:
+    """Emit RFC 3339 UTC timestamps (trailing Z, whole seconds).
+
+    Stored datetimes are naive UTC; without an explicit zone designator the
+    iOS client's ISO 8601 date decoding rejects the value, and fractional
+    seconds are equally unparseable there.
+    """
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    value = value.astimezone(UTC).replace(microsecond=0)
+    return value.isoformat().replace("+00:00", "Z")
+
+
+UTCDateTime = Annotated[
+    datetime, PlainSerializer(_serialize_utc, return_type=str, when_used="json")
+]
 
 
 class ErrorDetail(BaseModel):
@@ -23,7 +41,7 @@ class QuitPlanInput(BaseModel):
     nicotine_type: Literal["cigarettes", "vape", "pouches", "other"]
     daily_consumption: float = Field(gt=0, le=1000)
     unit_cost: float = Field(ge=0, le=1000)
-    quit_date: datetime
+    quit_date: UTCDateTime
     motivation: str = Field(default="", max_length=500)
     reminder_hour: int | None = Field(default=None, ge=0, le=23)
 
@@ -31,7 +49,7 @@ class QuitPlanInput(BaseModel):
 class QuitPlanOutput(QuitPlanInput):
     model_config = ConfigDict(from_attributes=True)
     id: str
-    updated_at: datetime
+    updated_at: UTCDateTime
 
 
 class CheckInInput(BaseModel):
@@ -40,7 +58,7 @@ class CheckInInput(BaseModel):
     coping_action: str = Field(min_length=1, max_length=120)
     note: str | None = Field(default=None, max_length=1000)
     resisted: bool
-    occurred_at: datetime
+    occurred_at: UTCDateTime
 
 
 class CheckInOutput(CheckInInput):

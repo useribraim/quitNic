@@ -53,6 +53,37 @@ async def test_quit_plan_progress_and_check_in_idempotency(authenticated):
 
 
 @pytest.mark.asyncio
+async def test_timestamps_are_rfc3339_utc_for_ios_date_decoding(authenticated):
+    quit_date = datetime.now(UTC).replace(microsecond=123456)
+    plan = {
+        "nicotine_type": "vape",
+        "daily_consumption": 5,
+        "unit_cost": 0.5,
+        "quit_date": quit_date.isoformat(),
+        "motivation": "Sleep better",
+        "reminder_hour": None,
+    }
+    plan_body = (await authenticated.put("/v1/quit-plan", json=plan)).json()
+    check_in = await authenticated.post(
+        "/v1/check-ins",
+        json={
+            "intensity": 4,
+            "trigger": "Coffee",
+            "coping_action": "Water",
+            "note": None,
+            "resisted": True,
+            "occurred_at": datetime.now(UTC).replace(microsecond=987654).isoformat(),
+        },
+        headers={"Idempotency-Key": "utc-format-check"},
+    )
+    for value in (plan_body["quit_date"], plan_body["updated_at"], check_in.json()["occurred_at"]):
+        # Swift's .iso8601 decoding requires a zone designator and rejects
+        # fractional seconds; naive timestamps stall the client's outbox.
+        assert value.endswith("Z"), value
+        assert "." not in value, value
+
+
+@pytest.mark.asyncio
 async def test_coaching_and_fixed_safety_response(authenticated):
     app.dependency_overrides[get_coaching_provider] = FakeCoach
     try:
