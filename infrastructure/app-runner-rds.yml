@@ -1,0 +1,121 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: QuitNic production API, private PostgreSQL, secrets, and alarms
+Parameters:
+  VpcId: {Type: AWS::EC2::VPC::Id}
+  PrivateSubnetIds: {Type: List<AWS::EC2::Subnet::Id}
+  ImageIdentifier: {Type: String, Description: Full ECR image URI including an immutable tag}
+  DatabaseName: {Type: String, Default: quitnic}
+  DatabaseUsername: {Type: String, Default: quitnic}
+  DatabasePassword:
+    Type: String
+    NoEcho: true
+    MinLength: 20
+  OpenAIAPIKey:
+    Type: String
+    NoEcho: true
+  TokenPepper:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+Resources:
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties: {GroupDescription: PostgreSQL from App Runner only, VpcId: !Ref VpcId}
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties: {GroupDescription: App Runner VPC egress, VpcId: !Ref VpcId}
+  DatabaseIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties: {GroupId: !Ref DatabaseSecurityGroup, IpProtocol: tcp, FromPort: 5432, ToPort: 5432, SourceSecurityGroupId: !Ref AppSecurityGroup}
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties: {DBSubnetGroupDescription: QuitNic private subnets, SubnetIds: !Ref PrivateSubnetIds}
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      Engine: postgres
+      EngineVersion: "16.3"
+      DBInstanceClass: db.t4g.micro
+      AllocatedStorage: 20
+      MaxAllocatedStorage: 100
+      StorageEncrypted: true
+      BackupRetentionPeriod: 7
+      MultiAZ: false
+      PubliclyAccessible: false
+      DBName: !Ref DatabaseName
+      MasterUsername: !Ref DatabaseUsername
+      MasterUserPassword: !Ref DatabasePassword
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      VPCSecurityGroups: [!Ref DatabaseSecurityGroup]
+  RuntimeSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      SecretString: !Sub '{"DATABASE_URL":"postgresql+asyncpg://${DatabaseUsername}:${DatabasePassword}@${Database.Endpoint.Address}:5432/${DatabaseName}?ssl=require","OPENAI_API_KEY":"${OpenAIAPIKey}","TOKEN_PEPPER":"${TokenPepper}"}'
+  VpcConnector:
+    Type: AWS::AppRunner::VpcConnector
+    Properties: {Subnets: !Ref PrivateSubnetIds, SecurityGroups: [!Ref AppSecurityGroup]}
+  AccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument: {Version: "2012-10-17", Statement: [{Effect: Allow, Principal: {Service: build.apprunner.amazonaws.com}, Action: "sts:AssumeRole"}]}
+      ManagedPolicyArns: [arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess]
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument: {Version: "2012-10-17", Statement: [{Effect: Allow, Principal: {Service: tasks.apprunner.amazonaws.com}, Action: "sts:AssumeRole"}]}
+      Policies:
+        - PolicyName: ReadRuntimeSecret
+          PolicyDocument: {Version: "2012-10-17", Statement: [{Effect: Allow, Action: "secretsmanager:GetSecretValue", Resource: !Ref RuntimeSecret}]}
+  Service:
+    Type: AWS::AppRunner::Service
+    DependsOn: Database
+    Properties:
+      SourceConfiguration:
+        AutoDeploymentsEnabled: false
+        AuthenticationConfiguration: {AccessRoleArn: !GetAtt AccessRole.Arn}
+        ImageRepository:
+          ImageIdentifier: !Ref ImageIdentifier
+          ImageRepositoryType: ECR
+          ImageConfiguration:
+            Port: "8000"
+            RuntimeEnvironmentVariables: {ENVIRONMENT: production, OPENAI_MODEL: gpt-4.1-mini}
+            RuntimeEnvironmentSecrets:
+              DATABASE_URL: !Sub "${RuntimeSecret}:DATABASE_URL::"
+              OPENAI_API_KEY: !Sub "${RuntimeSecret}:OPENAI_API_KEY::"
+              TOKEN_PEPPER: !Sub "${RuntimeSecret}:TOKEN_PEPPER::"
+      InstanceConfiguration: {Cpu: "1 vCPU", Memory: "2 GB", InstanceRoleArn: !GetAtt InstanceRole.Arn}
+      NetworkConfiguration: {EgressConfiguration: {EgressType: VPC, VpcConnectorArn: !GetAtt VpcConnector.VpcConnectorArn}}
+      HealthCheckConfiguration: {Protocol: HTTP, Path: /health, Interval: 10, Timeout: 5, HealthyThreshold: 1, UnhealthyThreshold: 5}
+  ServerErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: QuitNic API elevated 5xx responses
+      Namespace: AWS/AppRunner
+      MetricName: 5xxStatusResponses
+      Dimensions: [{Name: ServiceName, Value: !GetAtt Service.ServiceName}]
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+  LatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: QuitNic API p95 latency above two seconds
+      Namespace: AWS/AppRunner
+      MetricName: RequestLatency
+      Dimensions: [{Name: ServiceName, Value: !GetAtt Service.ServiceName}]
+      ExtendedStatistic: p95
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 2000
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+Outputs:
+  ServiceURL: {Value: !GetAtt Service.ServiceUrl}
+  ServiceArn: {Value: !GetAtt Service.ServiceArn}
+  RuntimeSecretArn: {Value: !Ref RuntimeSecret}
+

@@ -1,0 +1,52 @@
+import SwiftData
+import SwiftUI
+
+struct OnboardingView: View {
+    @Environment(\.modelContext) private var context
+    @State private var nicotineType = "cigarettes"
+    @State private var dailyConsumption = 10.0
+    @State private var unitCost = 0.75
+    @State private var quitDate = Date()
+    @State private var motivation = ""
+    @State private var reminders = true
+    @State private var reminderHour = 20
+    @State private var isSaving = false
+    @State private var warning: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Your plan") {
+                    Picker("Nicotine type", selection: $nicotineType) {
+                        Text("Cigarettes").tag("cigarettes"); Text("Vape").tag("vape"); Text("Pouches").tag("pouches"); Text("Other").tag("other")
+                    }
+                    Stepper("Daily units: \(Int(dailyConsumption))", value: $dailyConsumption, in: 1...100)
+                    HStack { Text("Cost per unit"); Spacer(); TextField("0.75", value: $unitCost, format: .currency(code: Locale.current.currency?.identifier ?? "EUR")).multilineTextAlignment(.trailing).keyboardType(.decimalPad) }
+                    DatePicker("Quit date", selection: $quitDate, displayedComponents: [.date, .hourAndMinute])
+                    TextField("Why do you want to quit?", text: $motivation, axis: .vertical)
+                        .lineLimit(3...5)
+                        .accessibilityIdentifier("motivationField")
+                }
+                Section("Reminders") {
+                    Toggle("Daily check-in", isOn: $reminders)
+                    if reminders { Picker("Hour", selection: $reminderHour) { ForEach(0..<24, id: \.self) { Text(String(format: "%02d:00", $0)).tag($0) } } }
+                }
+                if let warning { Text(warning).foregroundStyle(.orange).accessibilityLabel("Connection warning: \(warning)") }
+                Button(isSaving ? "Saving…" : "Start my plan") { Task { await save() } }.disabled(isSaving || motivation.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            .navigationTitle("QuitNic")
+        }
+    }
+
+    @MainActor private func save() async {
+        isSaving = true; warning = nil
+        let plan = QuitPlan(nicotineType: nicotineType, dailyConsumption: dailyConsumption, unitCost: unitCost, quitDate: quitDate, motivation: motivation, reminderHour: reminders ? reminderHour : nil)
+        context.insert(plan); try? context.save()
+        if reminders { try? await NotificationService.scheduleDaily(hour: reminderHour) }
+        do {
+            if KeychainStore.readToken() == nil { let registration = try await APIClient.shared.register(); try KeychainStore.saveToken(registration.accessToken) }
+            try await APIClient.shared.save(plan: QuitPlanRequest(nicotineType: nicotineType, dailyConsumption: dailyConsumption, unitCost: unitCost, quitDate: quitDate, motivation: motivation, reminderHour: reminders ? reminderHour : nil))
+        } catch { warning = "Your plan is saved on this device and will connect when the service is available." }
+        isSaving = false
+    }
+}

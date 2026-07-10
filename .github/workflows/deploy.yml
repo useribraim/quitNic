@@ -1,0 +1,22 @@
+name: Deploy API
+on: {workflow_dispatch: {}}
+permissions: {id-token: write, contents: read}
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+      - run: docker build -t "$ECR/quitnic-api:$GITHUB_SHA" backend
+        env: {ECR: "${{ steps.ecr.outputs.registry }}"}
+      - run: docker push "$ECR/quitnic-api:$GITHUB_SHA"
+        env: {ECR: "${{ steps.ecr.outputs.registry }}"}
+      - run: aws apprunner start-deployment --service-arn "${{ secrets.APP_RUNNER_SERVICE_ARN }}"
+

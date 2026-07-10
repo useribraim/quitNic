@@ -1,0 +1,25 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: quitnic
+      POSTGRES_USER: quitnic
+      POSTGRES_PASSWORD: local-password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quitnic"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://quitnic:local-password@db:5432/quitnic
+      TOKEN_PEPPER: local-development-pepper
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports: ["8000:8000"]
+    depends_on:
+      db: {condition: service_healthy}
+volumes:
+  postgres-data:
+
