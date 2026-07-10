@@ -19,7 +19,7 @@ docker compose up --build
 curl http://localhost:8000/health
 ```
 
-Interactive API documentation is available at `http://localhost:8000/docs`. Set `OPENAI_API_KEY` in the shell or `.env` to enable live coaching.
+Interactive API documentation is available at `http://localhost:8000/docs`. Development uses deterministic coaching when no OpenAI key is configured. Set `COACHING_PROVIDER=openai` and `OPENAI_API_KEY` in `.env` to exercise the production adapter.
 
 For lightweight development without Docker, install the backend dependencies once and use the migration-safe startup command:
 

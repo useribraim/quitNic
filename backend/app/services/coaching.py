@@ -53,10 +53,37 @@ class OpenAICoachingProvider(CoachingProvider):
         return response.output_text.strip()
 
 
+class DevelopmentCoachingProvider(CoachingProvider):
+    async def respond(self, message: str, context: list[ConversationTurn]) -> str:
+        normalized = message.casefold()
+        if "craving" in normalized or "urge" in normalized:
+            return (
+                "Try a two-minute reset: change location, take five slow breaths, and drink "
+                "some water. Cravings rise and pass. What small action would help you through "
+                "the next few minutes?"
+            )
+        if "stress" in normalized:
+            return (
+                "Stress can make an old routine feel automatic. Pause, name what is stressful, "
+                "and choose one short alternative such as walking or messaging someone supportive."
+            )
+        return (
+            "You are taking a useful step by checking in. Revisit your reason for quitting and "
+            "choose one manageable action for the next ten minutes."
+        )
+
+
 def is_crisis(message: str) -> bool:
     normalized = message.casefold()
     return any(term in normalized for term in CRISIS_TERMS)
 
 
 def get_coaching_provider() -> CoachingProvider:
+    settings = get_settings()
+    if settings.coaching_provider == "mock":
+        return DevelopmentCoachingProvider()
+    if settings.coaching_provider == "openai":
+        return OpenAICoachingProvider()
+    if settings.environment == "development" and not settings.openai_api_key:
+        return DevelopmentCoachingProvider()
     return OpenAICoachingProvider()

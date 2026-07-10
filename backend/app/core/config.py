@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./quitnic.db"
     openai_api_key: str | None = None
     openai_model: str = "gpt-4.1-mini"
+    coaching_provider: str = "auto"
     coaching_requests_per_minute: int = 10
     token_pepper: str = "development-only-change-me"
 
