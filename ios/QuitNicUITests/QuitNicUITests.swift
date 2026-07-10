@@ -44,7 +44,24 @@ final class QuitNicUITests: XCTestCase {
 
         app.tabBars.buttons["Coach"].tap()
         XCTAssertTrue(app.navigationBars["Coach"].waitForExistence(timeout: 3))
-        takeScreenshot(named: "04-coach")
+        let coachInput = app.descendants(matching: .any)["coachInput"]
+        coachInput.tap()
+        coachInput.typeText("I have a strong craving")
+        app.buttons["Send"].tap()
+        let coachingReply = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", "Try a two-minute reset")
+        ).firstMatch
+        XCTAssertTrue(coachingReply.waitForExistence(timeout: 5))
+        takeScreenshot(named: "04-coaching-reply")
+
+        coachInput.tap()
+        coachInput.typeText("I might kill myself")
+        app.buttons["Send"].tap()
+        let safetyReply = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", "contact local emergency services")
+        ).firstMatch
+        XCTAssertTrue(safetyReply.waitForExistence(timeout: 5))
+        takeScreenshot(named: "05-safety-reply")
     }
 
     private func takeScreenshot(named name: String) {

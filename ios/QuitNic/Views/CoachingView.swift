@@ -13,7 +13,7 @@ struct CoachingView: View {
                         .onChange(of: messages.count) { _, _ in if let id = messages.last?.id { proxy.scrollTo(id) } }
                 }
                 if let error = model.errorMessage { HStack { Text(error).font(.caption); Spacer(); Button("Retry") { Task { await retry() } } }.padding(8).background(.orange.opacity(0.18)) }
-                HStack { TextField("What’s happening?", text: $model.draft, axis: .vertical).textFieldStyle(.roundedBorder); Button("Send") { Task { await send() } }.disabled(model.draft.trimmingCharacters(in: .whitespaces).isEmpty || model.isLoading) }.padding()
+                HStack { TextField("What’s happening?", text: $model.draft, axis: .vertical).textFieldStyle(.roundedBorder).accessibilityIdentifier("coachInput"); Button("Send") { Task { await send() } }.disabled(model.draft.trimmingCharacters(in: .whitespaces).isEmpty || model.isLoading) }.padding()
             }.navigationTitle("Coach")
         }
     }
