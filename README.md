@@ -21,6 +21,17 @@ curl http://localhost:8000/health
 
 Interactive API documentation is available at `http://localhost:8000/docs`. Set `OPENAI_API_KEY` in the shell or `.env` to enable live coaching.
 
+For lightweight development without Docker, install the backend dependencies once and use the migration-safe startup command:
+
+```sh
+cd backend
+python3 -m venv .venv
+.venv/bin/pip install -e '.[dev]'
+./scripts/start-dev.sh
+```
+
+The script applies pending Alembic migrations before starting the reload server, preventing the app from connecting to an empty local database.
+
 ### iOS
 
 Install full Xcode and XcodeGen, then:
