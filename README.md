@@ -12,7 +12,7 @@ QuitNic is a privacy-conscious native iOS nicotine-quit coach backed by a Python
 
 ## Current verification
 
-The complete backend check (`ruff`, `mypy`, and `pytest`) passes. The full iOS suite passes on an iPhone 16 Pro Simulator: 17 unit tests plus four UI tests covering whole-journey accessibility, accessibility-XXXL onboarding and progress layouts, persistence, check-in synchronization, normal coaching and the urgent-language safety response. The non-root Docker image builds, applies its schema migration and returns a healthy runtime response.
+The complete backend check (`ruff`, `mypy`, and `pytest`) passes. The full iOS suite passes on an iPhone 16 Pro Simulator: 17 unit tests plus four UI tests covering whole-journey accessibility, accessibility-XXXL onboarding and progress layouts, persistence, check-in synchronization, normal coaching, the urgent-language safety response, and server-backed account deletion returning to onboarding. The non-root Docker image builds, applies its schema migration and returns a healthy runtime response.
 
 See [the architecture](docs/architecture.md), [API contract](docs/api.md), [test matrix](docs/testing.md), and [deployment design](docs/deployment.md) for implementation details.
 
