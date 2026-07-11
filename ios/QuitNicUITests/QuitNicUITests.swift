@@ -124,6 +124,15 @@ final class QuitNicUITests: XCTestCase {
         coachInput.tap()
         coachInput.typeText("I need another coping step")
         try app.performAccessibilityAudit(for: .all.subtracting(.dynamicType))
+
+        app.tap() // dismiss the keyboard before switching tabs
+        app.tabBars.buttons["Settings"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 3))
+        app.buttons["Delete account and local data"].tap()
+        XCTAssertTrue(app.buttons["Delete permanently"].waitForExistence(timeout: 3))
+        app.buttons["Delete permanently"].tap()
+        XCTAssertTrue(app.navigationBars["QuitNic"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Start my plan"].exists)
     }
 
     private func takeScreenshot(named name: String) {
