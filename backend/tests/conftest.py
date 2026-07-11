@@ -1,7 +1,9 @@
 import os
 from pathlib import Path
 
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test-quitnic.db"
+# CI overrides DATABASE_URL to exercise the suite against real PostgreSQL;
+# local runs default to a throwaway SQLite file.
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./test-quitnic.db")
 os.environ["TOKEN_PEPPER"] = "test-pepper"
 
 import pytest_asyncio
