@@ -1,6 +1,6 @@
 # Verification matrix
 
-Automated backend tests cover health, authentication boundaries, quit-plan synchronization, progress math, idempotent check-ins, safety responses, provider responses, and deletion. iOS tests cover progress/date boundaries, response-cache expiry, snake_case networking, and fresh-install onboarding.
+Automated backend tests cover health, authentication boundaries, quit-plan synchronization, progress math, idempotent check-ins, safety responses, provider responses, and deletion. iOS unit tests cover progress/date boundaries, response-cache expiry, snake_case networking, and offline-outbox recovery. Signed Simulator UI tests cover the complete quit journey, a fresh-install accessibility audit, and onboarding at the accessibility-XXXL content-size category.
 
 Before each external build, manually verify on at least one physical device:
 
@@ -10,4 +10,3 @@ Before each external build, manually verify on at least one physical device:
 4. Notification allowed and denied states, daily delivery, foreground/background transitions, and timezone change.
 5. Server-confirmed account deletion, Keychain removal, notification removal, and return to onboarding.
 6. Upgrade from the previous TestFlight build without losing the quit plan or check-in history.
-
