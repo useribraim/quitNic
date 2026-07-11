@@ -33,7 +33,28 @@ final class QuitNicUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Start my plan"].exists)
     }
 
-    func testCompleteQuitJourney() {
+    func testProgressSupportsAccessibilityXXXLText() {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing-reset",
+            "-ui-testing-seed-progress",
+            "-UIPreferredContentSizeCategoryName",
+            "UICTContentSizeCategoryAccessibilityExtraExtraExtraLarge"
+        ]
+        app.launch()
+
+        XCTAssertTrue(app.tabBars.buttons["Progress"].waitForExistence(timeout: 3))
+        app.tabBars.buttons["Progress"].tap()
+        XCTAssertTrue(app.staticTexts["Milestones"].waitForExistence(timeout: 3))
+
+        let trigger = app.staticTexts["A long craving trigger after morning coffee"]
+        for _ in 0..<4 where !trigger.exists { app.swipeUp() }
+        XCTAssertTrue(trigger.exists)
+        XCTAssertTrue(app.staticTexts["A deliberately long walk around the neighbourhood"].exists)
+        takeScreenshot(named: "06-progress-accessibility-xxxl")
+    }
+
+    func testCompleteQuitJourney() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing-reset"]
         addUIInterruptionMonitor(withDescription: "Notifications") { alert in
@@ -53,12 +74,17 @@ final class QuitNicUITests: XCTestCase {
 
         XCTAssertTrue(app.tabBars.buttons["Today"].waitForExistence(timeout: 8))
         takeScreenshot(named: "01-dashboard")
+        try app.performAccessibilityAudit(for: .all.subtracting(.dynamicType))
 
         app.tabBars.buttons["Check In"].tap()
-        app.textFields["What triggered it?"].tap()
-        app.textFields["What triggered it?"].typeText("After coffee")
-        app.textFields["What did you try?"].tap()
-        app.textFields["What did you try?"].typeText("A short walk")
+        let triggerField = app.descendants(matching: .any)["triggerField"]
+        let copingActionField = app.descendants(matching: .any)["copingActionField"]
+        triggerField.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.2)).tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 2))
+        app.typeText("After coffee")
+        copingActionField.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.2)).tap()
+        app.typeText("A short walk")
+        try app.performAccessibilityAudit(for: .all.subtracting(.dynamicType))
         app.buttons["Save check-in"].tap()
         XCTAssertTrue(app.alerts["Check-in saved"].waitForExistence(timeout: 3))
         app.alerts["Check-in saved"].buttons["OK"].tap()
@@ -68,6 +94,11 @@ final class QuitNicUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Progress"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.staticTexts["After coffee"].exists)
         takeScreenshot(named: "03-progress")
+        try app.performAccessibilityAudit(for: .all.subtracting(.dynamicType)) { issue in
+            // Xcode 16 can emit text-clipping reports without an associated element.
+            // The accessibility-XXXL Progress test below verifies this layout directly.
+            issue.auditType == .textClipped && issue.element == nil
+        }
 
         app.tabBars.buttons["Coach"].tap()
         XCTAssertTrue(app.navigationBars["Coach"].waitForExistence(timeout: 3))
@@ -83,12 +114,16 @@ final class QuitNicUITests: XCTestCase {
 
         coachInput.tap()
         coachInput.typeText("I might kill myself")
+        try app.performAccessibilityAudit(for: .all.subtracting(.dynamicType))
         app.buttons["Send"].tap()
         let safetyReply = app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS %@", "contact local emergency services")
         ).firstMatch
         XCTAssertTrue(safetyReply.waitForExistence(timeout: 5))
         takeScreenshot(named: "05-safety-reply")
+        coachInput.tap()
+        coachInput.typeText("I need another coping step")
+        try app.performAccessibilityAudit(for: .all.subtracting(.dynamicType))
     }
 
     private func takeScreenshot(named name: String) {

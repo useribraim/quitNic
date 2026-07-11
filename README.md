@@ -8,11 +8,11 @@ QuitNic is a privacy-conscious native iOS nicotine-quit coach backed by a Python
 - **Offline data integration:** cached progress plus a persistent outbox with idempotency keys, retry classification, relaunch recovery and duplicate-delivery protection.
 - **Backend service:** FastAPI, typed Pydantic contracts, SQLAlchemy relational models, Alembic migrations, PostgreSQL and opaque bearer-token authentication with only token hashes persisted.
 - **AI safety boundary:** provider-isolated OpenAI adapter, deterministic development provider, bounded context and a fixed urgent-language escalation path.
-- **Engineering quality:** 11 backend tests, 17 iOS unit tests and three signed Simulator UI tests, including an automated accessibility audit and an accessibility-XXXL layout check, with client-server GitHub Actions and PostgreSQL migration coverage.
+- **Engineering quality:** 11 backend tests, 17 iOS unit tests and four signed Simulator UI tests, including whole-journey accessibility audits and accessibility-XXXL layout checks, with client-server GitHub Actions and PostgreSQL migration coverage.
 
 ## Current verification
 
-The complete backend check (`ruff`, `mypy`, and `pytest`) passes. The full iOS suite passes on an iPhone 16 Pro Simulator: 17 unit tests plus three UI tests covering onboarding accessibility, accessibility-XXXL text, persistence, check-in synchronization, progress, normal coaching and the urgent-language safety response. The non-root Docker image builds, applies its schema migration and returns a healthy runtime response.
+The complete backend check (`ruff`, `mypy`, and `pytest`) passes. The full iOS suite passes on an iPhone 16 Pro Simulator: 17 unit tests plus four UI tests covering whole-journey accessibility, accessibility-XXXL onboarding and progress layouts, persistence, check-in synchronization, normal coaching and the urgent-language safety response. The non-root Docker image builds, applies its schema migration and returns a healthy runtime response.
 
 See [the architecture](docs/architecture.md), [API contract](docs/api.md), [test matrix](docs/testing.md), and [deployment design](docs/deployment.md) for implementation details.
 

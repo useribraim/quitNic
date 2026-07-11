@@ -9,7 +9,7 @@ struct DashboardView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     Text(progress.seconds == 0 ? "Your quit begins soon" : "You’re building momentum").font(.title.bold())
-                    Text(plan.motivation).font(.headline).foregroundStyle(.secondary)
+                    Text(plan.motivation).font(.headline)
                     TimelineCard(seconds: progress.seconds)
                     LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 12) {
                         MetricCard(title: "Money saved", value: progress.moneySaved.formatted(.currency(code: Locale.current.currency?.identifier ?? "EUR")), icon: "eurosign.circle")
@@ -27,12 +27,11 @@ private struct TimelineCard: View {
     let seconds: Int
     var body: some View {
         let days = seconds / 86_400, hours = (seconds % 86_400) / 3600, minutes = (seconds % 3600) / 60
-        VStack(alignment: .leading) { Text("Nicotine-free time").font(.caption).foregroundStyle(.secondary); Text("\(days)d  \(hours)h  \(minutes)m").font(.system(.largeTitle, design: .rounded).bold()) }
+        VStack(alignment: .leading) { Text("Nicotine-free time").font(.caption); Text("\(days)d  \(hours)h  \(minutes)m").font(.system(.largeTitle, design: .rounded).bold()) }
             .frame(maxWidth: .infinity, alignment: .leading).padding().background(.green.opacity(0.15), in: RoundedRectangle(cornerRadius: 18))
     }
 }
 private struct MetricCard: View {
     let title: String, value: String, icon: String
-    var body: some View { VStack(alignment: .leading, spacing: 8) { Image(systemName: icon).foregroundStyle(.green); Text(value).font(.headline); Text(title).font(.caption).foregroundStyle(.secondary) }.frame(maxWidth: .infinity, minHeight: 90, alignment: .leading).padding().background(.quaternary, in: RoundedRectangle(cornerRadius: 16)).accessibilityElement(children: .combine) }
+    var body: some View { VStack(alignment: .leading, spacing: 8) { Image(systemName: icon).foregroundStyle(.green); Text(value).font(.headline); Text(title).font(.caption) }.frame(maxWidth: .infinity, minHeight: 90, alignment: .leading).padding().background(.quaternary, in: RoundedRectangle(cornerRadius: 16)).accessibilityElement(children: .combine) }
 }
-

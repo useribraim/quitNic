@@ -12,14 +12,24 @@ struct CheckInView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Craving") {
+                Section {
                     VStack(alignment: .leading) { Text("Intensity: \(Int(intensity))/10"); Slider(value: $intensity, in: 1...10, step: 1).accessibilityLabel("Craving intensity") }
-                    TextField("What triggered it?", text: $trigger)
-                    TextField("What did you try?", text: $copingAction)
+                    TextField("What triggered it?", text: $trigger, axis: .vertical)
+                        .lineLimit(1...2)
+                        .accessibilityIdentifier("triggerField")
+                    TextField("What did you try?", text: $copingAction, axis: .vertical)
+                        .lineLimit(1...2)
+                        .accessibilityIdentifier("copingActionField")
                     TextField("Optional note", text: $note, axis: .vertical)
                     Toggle("I resisted the craving", isOn: $resisted)
+                } header: {
+                    Text("Craving")
+                        .foregroundStyle(.primary)
                 }
-                Button("Save check-in") { save() }.disabled(trigger.isEmpty || copingAction.isEmpty)
+                .headerProminence(.increased)
+                Button("Save check-in") { save() }
+                    .tint(Color(red: 0, green: 0.25, blue: 0.65))
+                    .disabled(trigger.isEmpty || copingAction.isEmpty)
             }.navigationTitle("Check In").alert("Check-in saved", isPresented: $confirmation) { Button("OK", role: .cancel) {} } message: { Text("It is safely stored and will sync when you’re online.") }
         }
     }
@@ -30,4 +40,3 @@ struct CheckInView: View {
         Task { await OutboxService.flush(context: context) }
     }
 }
-
