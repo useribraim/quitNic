@@ -10,6 +10,7 @@ final class QuitNicUITests: XCTestCase {
 
     func testCompleteQuitJourney() {
         let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing-reset"]
         addUIInterruptionMonitor(withDescription: "Notifications") { alert in
             if alert.buttons["Allow"].exists { alert.buttons["Allow"].tap(); return true }
             return false

@@ -81,9 +81,13 @@ final class OutboxServiceTests: XCTestCase {
             return (Self.response(for: request, status: 201), Self.checkInResponseBody(id: checkIn.id))
         }
         let client = makeClient()
-        async let first: Void = OutboxService.flush(context: context, client: client)
-        async let second: Void = OutboxService.flush(context: context, client: client)
-        _ = await (first, second)
+        let first = Task { @MainActor in
+            await OutboxService.flush(context: context, client: client)
+        }
+        let second = Task { @MainActor in
+            await OutboxService.flush(context: context, client: client)
+        }
+        _ = await (first.value, second.value)
         XCTAssertEqual(recorder.requests.count, 1)
     }
 
