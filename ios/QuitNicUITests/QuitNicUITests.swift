@@ -1,10 +1,35 @@
 import XCTest
 
 final class QuitNicUITests: XCTestCase {
-    func testOnboardingIsAccessibleOnFreshInstall() {
+    func testOnboardingIsAccessibleOnFreshInstall() throws {
         let app = XCUIApplication(); app.launchArguments = ["-ui-testing-reset"]
         app.launch()
         XCTAssertTrue(app.navigationBars["QuitNic"].waitForExistence(timeout: 3))
+        let startButton = app.buttons["Start my plan"]
+        XCTAssertTrue(startButton.exists)
+        XCTAssertFalse(startButton.isEnabled)
+
+        let motivation = app.descendants(matching: .any)["motivationField"]
+        XCTAssertTrue(motivation.exists)
+        motivation.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.2)).tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 2))
+        app.typeText("More energy and freedom")
+        XCTAssertTrue(startButton.isEnabled)
+        try app.performAccessibilityAudit(for: .all.subtracting(.dynamicType))
+    }
+
+    func testOnboardingSupportsAccessibilityXXXLText() {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing-reset",
+            "-UIPreferredContentSizeCategoryName",
+            "UICTContentSizeCategoryAccessibilityExtraExtraExtraLarge"
+        ]
+        app.launch()
+
+        XCTAssertTrue(app.navigationBars["QuitNic"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Nicotine type"].exists)
+        XCTAssertTrue(app.staticTexts["Hour"].exists)
         XCTAssertTrue(app.buttons["Start my plan"].exists)
     }
 
@@ -20,8 +45,9 @@ final class QuitNicUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["QuitNic"].waitForExistence(timeout: 5))
         let motivation = app.descendants(matching: .any)["motivationField"]
         XCTAssertTrue(motivation.exists)
-        motivation.tap()
-        motivation.typeText("More energy and freedom")
+        motivation.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.2)).tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 2))
+        app.typeText("More energy and freedom")
         app.buttons["Start my plan"].tap()
         app.tap()
 

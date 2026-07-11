@@ -13,12 +13,24 @@ struct OnboardingView: View {
     @State private var isSaving = false
     @State private var warning: String?
 
+    private var canStart: Bool {
+        !isSaving && !motivation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var body: some View {
         NavigationStack {
             Form {
-                Section("Your plan") {
-                    Picker("Nicotine type", selection: $nicotineType) {
-                        Text("Cigarettes").tag("cigarettes"); Text("Vape").tag("vape"); Text("Pouches").tag("pouches"); Text("Other").tag("other")
+                Section {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Nicotine type")
+                        Picker("Nicotine type", selection: $nicotineType) {
+                            Text("Cigarettes").tag("cigarettes")
+                            Text("Vape").tag("vape")
+                            Text("Pouches").tag("pouches")
+                            Text("Other").tag("other")
+                        }
+                        .labelsHidden()
+                        .tint(.primary)
                     }
                     Stepper("Daily units: \(Int(dailyConsumption))", value: $dailyConsumption, in: 1...100)
                     HStack { Text("Cost per unit"); Spacer(); TextField("0.75", value: $unitCost, format: .currency(code: Locale.current.currency?.identifier ?? "EUR")).multilineTextAlignment(.trailing).keyboardType(.decimalPad) }
@@ -26,13 +38,41 @@ struct OnboardingView: View {
                     TextField("Why do you want to quit?", text: $motivation, axis: .vertical)
                         .lineLimit(3...5)
                         .accessibilityIdentifier("motivationField")
+                } header: {
+                    Text("Your plan")
+                        .foregroundStyle(.primary)
                 }
-                Section("Reminders") {
+                .headerProminence(.increased)
+                Section {
                     Toggle("Daily check-in", isOn: $reminders)
-                    if reminders { Picker("Hour", selection: $reminderHour) { ForEach(0..<24, id: \.self) { Text(String(format: "%02d:00", $0)).tag($0) } } }
+                    if reminders {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Hour")
+                            Picker("Hour", selection: $reminderHour) {
+                                ForEach(0..<24, id: \.self) {
+                                    Text(String(format: "%02d:00", $0)).tag($0)
+                                }
+                            }
+                            .labelsHidden()
+                            .tint(.primary)
+                        }
+                    }
+                } header: {
+                    Text("Reminders")
+                        .foregroundStyle(.primary)
                 }
+                .headerProminence(.increased)
                 if let warning { Text(warning).foregroundStyle(.orange).accessibilityLabel("Connection warning: \(warning)") }
-                Button(isSaving ? "Saving…" : "Start my plan") { Task { await save() } }.disabled(isSaving || motivation.trimmingCharacters(in: .whitespaces).isEmpty)
+                Button {
+                    Task { await save() }
+                } label: {
+                    Text(isSaving ? "Saving…" : "Start my plan")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .tint(Color(red: 0, green: 0.25, blue: 0.65))
+                .disabled(!canStart)
+                .accessibilityHint(canStart ? "Saves your quit plan" : "Enter why you want to quit before starting")
             }
             .navigationTitle("QuitNic")
         }
