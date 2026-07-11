@@ -34,7 +34,10 @@ jobs:
       - run: brew install xcodegen
       - run: xcodegen generate
         working-directory: ios
-      - run: xcodebuild test -project QuitNic.xcodeproj -scheme QuitNic -destination 'platform=iOS Simulator,name=iPhone 16'
+      - name: Run iOS tests
+        run: |
+          set -o pipefail
+          xcodebuild test -project QuitNic.xcodeproj -scheme QuitNic -destination 'platform=iOS Simulator,name=iPhone 16' 2>&1 | tee "$RUNNER_TEMP/xcodebuild.log"
         working-directory: ios
       - name: Upload API log on failure
         if: failure()
@@ -42,3 +45,9 @@ jobs:
         with:
           name: quitnic-api-log
           path: ${{ runner.temp }}/quitnic-api.log
+      - name: Upload Xcode log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quitnic-xcodebuild-log
+          path: ${{ runner.temp }}/xcodebuild.log
