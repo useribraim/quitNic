@@ -19,15 +19,31 @@ struct RootView: View {
 }
 
 struct MainTabView: View {
+    private enum Tab: Hashable {
+        case today, checkIn, coach, progress, settings
+    }
+
     let plan: QuitPlan
+    @State private var selection: Tab = .today
+
     var body: some View {
-        TabView {
-            DashboardView(plan: plan).tabItem { Label("Today", systemImage: "heart.text.square") }
-            CheckInView().tabItem { Label("Check In", systemImage: "waveform.path.ecg") }
-            CoachingView().tabItem { Label("Coach", systemImage: "message.fill") }
-            ProgressView(plan: plan).tabItem { Label("Progress", systemImage: "chart.line.uptrend.xyaxis") }
-            SettingsView(plan: plan).tabItem { Label("Settings", systemImage: "gear") }
+        TabView(selection: $selection) {
+            DashboardView(plan: plan) { selection = .checkIn }
+                .tabItem { Label("Today", systemImage: "heart.text.square") }
+                .tag(Tab.today)
+            CheckInView()
+                .tabItem { Label("Check In", systemImage: "waveform.path.ecg") }
+                .tag(Tab.checkIn)
+            CoachingView()
+                .tabItem { Label("Coach", systemImage: "message.fill") }
+                .tag(Tab.coach)
+            ProgressView(plan: plan)
+                .tabItem { Label("Progress", systemImage: "chart.line.uptrend.xyaxis") }
+                .tag(Tab.progress)
+            SettingsView(plan: plan)
+                .tabItem { Label("Settings", systemImage: "gear") }
+                .tag(Tab.settings)
         }
+        .tint(QuitNicTheme.teal)
     }
 }
-

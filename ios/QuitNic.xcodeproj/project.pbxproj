@@ -18,6 +18,7 @@
 		4365B90F698767B7643B9082 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5F3516423A63B130E4B3B46 /* SettingsView.swift */; };
 		43838E6BAC751687EF7AA0B7 /* ResponseCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46BF96E990605654AD6ADBC7 /* ResponseCache.swift */; };
 		4581527605B018E423D3ECB8 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 248D6BB71779F1BDD13F1EAD /* OnboardingView.swift */; };
+		767C3B1465D9BB0450539423 /* QuitNicDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAFCC4CF7B748A607CC4E5A6 /* QuitNicDesignSystem.swift */; };
 		8CA22BD3F0548CF2C67EC6AA /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32983BCB44CCAA8C9C5BB7D3 /* KeychainStore.swift */; };
 		8EF0C3A5E83D550AD223EFED /* CoachingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ECC9CDA03BEA41B6AB950E6 /* CoachingViewModel.swift */; };
 		940AEE6AAD7093FE78E92C73 /* QuitNicUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A770ACDF83224474284023F /* QuitNicUITests.swift */; };
@@ -72,6 +73,7 @@
 		C3B1EECD0282FCEBDED765BA /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		CCA9C48E938317D2189FD975 /* CoachingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachingView.swift; sourceTree = "<group>"; };
 		DAC6E402CD6224F0FE099178 /* APIClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientTests.swift; sourceTree = "<group>"; };
+		DAFCC4CF7B748A607CC4E5A6 /* QuitNicDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuitNicDesignSystem.swift; sourceTree = "<group>"; };
 		E978273791D8C10A25C8B268 /* QuitNic.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = QuitNic.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0316BFDD8C7E9E7E5796C29 /* QuitNicApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuitNicApp.swift; sourceTree = "<group>"; };
 		F5F3516423A63B130E4B3B46 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -126,6 +128,7 @@
 				B9444E02D83064597CFFD41D /* DashboardView.swift */,
 				248D6BB71779F1BDD13F1EAD /* OnboardingView.swift */,
 				1A250DE30082BF0AC9530F7F /* ProgressView.swift */,
+				DAFCC4CF7B748A607CC4E5A6 /* QuitNicDesignSystem.swift */,
 				C3B1EECD0282FCEBDED765BA /* RootView.swift */,
 				F5F3516423A63B130E4B3B46 /* SettingsView.swift */,
 			);
@@ -322,6 +325,7 @@
 				4085EEF7B622C1A343EE0FBF /* ProgressCalculator.swift in Sources */,
 				34993C55779BC7320636C206 /* ProgressView.swift in Sources */,
 				2EEB58EF95027EBDFE4D125D /* QuitNicApp.swift in Sources */,
+				767C3B1465D9BB0450539423 /* QuitNicDesignSystem.swift in Sources */,
 				43838E6BAC751687EF7AA0B7 /* ResponseCache.swift in Sources */,
 				FBB3002F9AB731ED272C32A0 /* RootView.swift in Sources */,
 				4365B90F698767B7643B9082 /* SettingsView.swift in Sources */,
