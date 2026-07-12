@@ -36,6 +36,44 @@ final class CravingCheckIn {
 }
 
 @Model
+final class RescueSession {
+    @Attribute(.unique) var id: UUID
+    var startingIntensity: Int
+    var endingIntensity: Int?
+    var trigger: String
+    var intervention: String
+    var startedAt: Date
+    var completedAt: Date?
+    var resisted: Bool?
+    var durationSeconds: Int
+    var synced: Bool
+
+    init(
+        id: UUID = UUID(),
+        startingIntensity: Int,
+        endingIntensity: Int? = nil,
+        trigger: String,
+        intervention: String,
+        startedAt: Date = .now,
+        completedAt: Date? = nil,
+        resisted: Bool? = nil,
+        durationSeconds: Int = 0,
+        synced: Bool = false
+    ) {
+        self.id = id
+        self.startingIntensity = startingIntensity
+        self.endingIntensity = endingIntensity
+        self.trigger = trigger
+        self.intervention = intervention
+        self.startedAt = startedAt
+        self.completedAt = completedAt
+        self.resisted = resisted
+        self.durationSeconds = durationSeconds
+        self.synced = synced
+    }
+}
+
+@Model
 final class ChatMessage {
     @Attribute(.unique) var id: UUID
     var role: String
@@ -66,4 +104,3 @@ final class CachedPayload {
     var expiresAt: Date
     init(key: String, payload: Data, expiresAt: Date) { self.key = key; self.payload = payload; self.expiresAt = expiresAt }
 }
-

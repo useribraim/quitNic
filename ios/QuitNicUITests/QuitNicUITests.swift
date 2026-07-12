@@ -81,23 +81,22 @@ final class QuitNicUITests: XCTestCase {
             return !element.isHittable || element.frame.intersects(app.tabBars.firstMatch.frame)
         }
 
-        app.tabBars.buttons["Check In"].tap()
-        let triggerField = app.descendants(matching: .any)["triggerField"]
-        let copingActionField = app.descendants(matching: .any)["copingActionField"]
-        triggerField.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.2)).tap()
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 2))
-        app.typeText("After coffee")
-        copingActionField.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.2)).tap()
-        app.typeText("A short walk")
+        app.tabBars.buttons["Rescue"].tap()
+        XCTAssertTrue(app.buttons["Start a two-minute reset"].waitForExistence(timeout: 3))
+        app.buttons["Start a two-minute reset"].tap()
+        app.buttons["Coffee"].tap()
         try app.performAccessibilityAudit(for: .all.subtracting(.dynamicType))
-        app.buttons["Save check-in"].tap()
-        XCTAssertTrue(app.alerts["Check-in saved"].waitForExistence(timeout: 3))
-        app.alerts["Check-in saved"].buttons["OK"].tap()
-        takeScreenshot(named: "02-check-in")
+        app.buttons["Continue"].tap()
+        XCTAssertTrue(app.staticTexts["Breathing reset"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["How do you feel now?"].waitForExistence(timeout: 5))
+        app.buttons["Save result"].tap()
+        XCTAssertTrue(app.staticTexts["You moved through it."].waitForExistence(timeout: 3))
+        takeScreenshot(named: "02-rescue-complete")
+        app.buttons["Done"].tap()
 
         app.tabBars.buttons["Progress"].tap()
         XCTAssertTrue(app.navigationBars["Progress"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["After coffee"].exists)
+        XCTAssertTrue(app.staticTexts["Coffee"].exists)
         takeScreenshot(named: "03-progress")
         try app.performAccessibilityAudit(for: .all.subtracting(.dynamicType)) { issue in
             // Xcode 16 can emit text-clipping reports without an associated element.

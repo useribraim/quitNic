@@ -6,7 +6,7 @@ struct QuitNicApp: App {
     private let container: ModelContainer
 
     init() {
-        let schema = Schema([QuitPlan.self, CravingCheckIn.self, ChatMessage.self, PendingOperation.self, CachedPayload.self])
+        let schema = Schema([QuitPlan.self, CravingCheckIn.self, RescueSession.self, ChatMessage.self, PendingOperation.self, CachedPayload.self])
         let arguments = ProcessInfo.processInfo.arguments
         let isUITesting = arguments.contains("-ui-testing-reset")
         if isUITesting {

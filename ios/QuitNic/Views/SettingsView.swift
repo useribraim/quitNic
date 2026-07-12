@@ -24,9 +24,8 @@ struct SettingsView: View {
         do { if KeychainStore.readToken() != nil { try await APIClient.shared.deleteAccount() } }
         catch { errorMessage = "The server could not be reached. Local data was not deleted so you can retry safely."; return }
         do {
-            try context.delete(model: ChatMessage.self); try context.delete(model: CravingCheckIn.self); try context.delete(model: PendingOperation.self); try context.delete(model: CachedPayload.self); try context.delete(model: QuitPlan.self); try context.save()
+            try context.delete(model: ChatMessage.self); try context.delete(model: CravingCheckIn.self); try context.delete(model: RescueSession.self); try context.delete(model: PendingOperation.self); try context.delete(model: CachedPayload.self); try context.delete(model: QuitPlan.self); try context.save()
             KeychainStore.deleteToken(); NotificationService.removeAll()
         } catch { errorMessage = "Local data could not be deleted." }
     }
 }
-

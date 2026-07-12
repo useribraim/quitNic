@@ -32,7 +32,7 @@ struct MainTabView: View {
                 .tabItem { Label("Today", systemImage: "heart.text.square") }
                 .tag(Tab.today)
             CheckInView()
-                .tabItem { Label("Check In", systemImage: "waveform.path.ecg") }
+                .tabItem { Label("Rescue", systemImage: "wind") }
                 .tag(Tab.checkIn)
             CoachingView()
                 .tabItem { Label("Coach", systemImage: "message.fill") }

@@ -40,7 +40,7 @@ struct DashboardView: View {
                     MotivationCard(motivation: plan.motivation)
                     TimelineCard(seconds: progress.seconds)
                     Button(action: onCheckIn) {
-                        Label("Log a craving", systemImage: "plus.circle.fill")
+                        Label("I need help now", systemImage: "wind.circle.fill")
                     }
                     .buttonStyle(QuitNicPrimaryButtonStyle())
                     .accessibilityHint("Opens the craving check-in screen")
