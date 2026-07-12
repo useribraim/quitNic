@@ -13,6 +13,11 @@ enum QuitNicTheme {
             ? UIColor(red: 0.29, green: 0.82, blue: 0.72, alpha: 1)
             : UIColor(red: 0.02, green: 0.42, blue: 0.36, alpha: 1)
     })
+    static let secondaryInk = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.76, green: 0.80, blue: 0.83, alpha: 1)
+            : UIColor(red: 0.27, green: 0.31, blue: 0.34, alpha: 1)
+    })
     static let actionTeal = Color(red: 0.02, green: 0.42, blue: 0.36)
     static let mint = Color(red: 0.79, green: 0.94, blue: 0.87)
     static let warmBackground = Color(uiColor: UIColor { traits in

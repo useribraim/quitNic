@@ -74,7 +74,12 @@ final class QuitNicUITests: XCTestCase {
 
         XCTAssertTrue(app.tabBars.buttons["Today"].waitForExistence(timeout: 8))
         takeScreenshot(named: "01-dashboard")
-        try app.performAccessibilityAudit(for: .all.subtracting(.dynamicType))
+        try app.performAccessibilityAudit(for: .all.subtracting(.dynamicType)) { issue in
+            // XCTest can sample offscreen ScrollView content through the translucent tab bar.
+            // Visible contrast findings still fail; only covered/non-hittable elements are excluded.
+            guard issue.auditType == .contrast, let element = issue.element else { return false }
+            return !element.isHittable || element.frame.intersects(app.tabBars.firstMatch.frame)
+        }
 
         app.tabBars.buttons["Check In"].tap()
         let triggerField = app.descendants(matching: .any)["triggerField"]

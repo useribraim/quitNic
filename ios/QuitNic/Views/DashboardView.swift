@@ -47,8 +47,6 @@ struct DashboardView: View {
                     LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 12) {
                         MetricCard(title: "Money saved", value: progress.moneySaved.formatted(.currency(code: Locale.current.currency?.identifier ?? "EUR")), icon: "banknote.fill", tint: QuitNicTheme.teal)
                         MetricCard(title: "Units avoided", value: progress.avoidedUnits.formatted(.number.precision(.fractionLength(0))), icon: "leaf.fill", tint: .green)
-                        MetricCard(title: "Current streak", value: "\(progress.streakDays) days", icon: "flame.fill", tint: .orange)
-                        MetricCard(title: "Daily goal", value: progress.seconds > 0 ? "Keep going" : "Get ready", icon: "heart.fill", tint: .pink)
                     }
                     MilestoneCard(milestone: milestone)
                 }
@@ -85,7 +83,7 @@ private struct HeaderView: View {
                 .fixedSize(horizontal: false, vertical: true)
             Text(hasStarted ? "Every craving you move through is evidence that you can do this." : "Your plan is ready. Start with one small choice at a time.")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(QuitNicTheme.secondaryInk)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .combine)
@@ -104,7 +102,7 @@ private struct MotivationCard: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text("Your reason")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(QuitNicTheme.secondaryInk)
                 Text(motivation)
                     .font(.headline)
                     .fixedSize(horizontal: false, vertical: true)
@@ -123,7 +121,7 @@ private struct TimelineCard: View {
         VStack(alignment: .leading, spacing: 10) {
             Label("Nicotine-free time", systemImage: "clock.fill")
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.82))
+                .foregroundStyle(.white)
             Text("\(days)d  \(hours)h  \(minutes)m")
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
                 .foregroundStyle(.white)
@@ -160,7 +158,7 @@ private struct MetricCard: View {
                 .fixedSize(horizontal: false, vertical: true)
             Text(title)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(QuitNicTheme.secondaryInk)
         }
         .frame(maxWidth: .infinity, minHeight: 116, alignment: .leading)
         .quitNicCard()
@@ -188,18 +186,18 @@ private struct MilestoneCard: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Next milestone")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(QuitNicTheme.secondaryInk)
                     Text(milestone.title)
                         .font(.headline)
                     Text(milestone.detail)
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(QuitNicTheme.secondaryInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 8)
                 Text(milestone.remainingText)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(QuitNicTheme.teal)
+                    .foregroundStyle(QuitNicTheme.ink)
                     .multilineTextAlignment(.trailing)
             }
             SwiftUI.ProgressView(value: milestone.fraction)
