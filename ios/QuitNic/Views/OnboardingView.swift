@@ -21,6 +21,21 @@ struct OnboardingView: View {
         NavigationStack {
             Form {
                 Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("A steadier way forward")
+                            .font(.system(.title, design: .rounded, weight: .bold))
+                            .foregroundStyle(QuitNicTheme.ink)
+                        Text("Set a quit date, notice your patterns, and get support when a craving shows up.")
+                            .font(.subheadline)
+                            .foregroundStyle(QuitNicTheme.secondaryInk)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 8)
+                    .accessibilityElement(children: .combine)
+                }
+                .listRowBackground(Color.clear)
+
+                Section {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Nicotine type")
                         Picker("Nicotine type", selection: $nicotineType) {
@@ -66,14 +81,26 @@ struct OnboardingView: View {
                 Button {
                     Task { await save() }
                 } label: {
-                    Text(isSaving ? "Saving…" : "Start my plan")
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .fixedSize(horizontal: false, vertical: true)
+                    HStack {
+                        Text(isSaving ? "Saving…" : "Start my plan")
+                        Spacer()
+                        Image(systemName: "arrow.right")
+                    }
+                    .font(.headline)
+                    .foregroundStyle(canStart ? .white : QuitNicTheme.secondaryInk)
+                    .padding(.vertical, 4)
+                    .frame(maxWidth: .infinity)
                 }
-                .tint(Color(red: 0, green: 0.25, blue: 0.65))
+                .listRowBackground(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(canStart ? QuitNicTheme.actionTeal : QuitNicTheme.secondaryInk.opacity(0.12))
+                )
+                .buttonStyle(.plain)
                 .disabled(!canStart)
                 .accessibilityHint(canStart ? "Saves your quit plan" : "Enter why you want to quit before starting")
             }
+            .scrollContentBackground(.hidden)
+            .background(QuitNicTheme.warmBackground)
             .navigationTitle("QuitNic")
         }
     }
