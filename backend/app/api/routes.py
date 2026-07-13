@@ -1,3 +1,4 @@
+from collections import Counter
 from datetime import UTC, datetime
 from math import ceil
 
@@ -15,6 +16,7 @@ from ..schemas import (
     CheckInPage,
     CoachingRequest,
     CoachingResponse,
+    ConversationTurn,
     DeleteResponse,
     DeviceRegistration,
     Milestone,
@@ -25,6 +27,38 @@ from ..schemas import (
 from ..services.coaching import SAFETY_RESPONSE, CoachingProvider, get_coaching_provider, is_crisis
 
 router = APIRouter(prefix="/v1")
+
+
+def _coaching_profile(plan: QuitPlan | None, check_ins: list[CheckIn]) -> str | None:
+    """Build a small, purpose-limited context block for the coaching provider."""
+    if plan is None and not check_ins:
+        return None
+    lines = ["Private quit-coaching context; use only to personalize practical support."]
+    if plan is not None:
+        quit_date = plan.quit_date if plan.quit_date.tzinfo else plan.quit_date.replace(tzinfo=UTC)
+        days = max(0, int((datetime.now(UTC) - quit_date).total_seconds() // 86_400))
+        lines.append(
+            f"Plan: {plan.nicotine_type}, about {plan.daily_consumption:g} units/day, "
+            f"quit journey day {days + 1}."
+        )
+        if plan.motivation:
+            lines.append(f"Motivation: {plan.motivation[:240]}")
+    if check_ins:
+        triggers = Counter(item.trigger for item in check_ins).most_common(3)
+        actions = Counter(item.coping_action for item in check_ins).most_common(3)
+        average = sum(item.intensity for item in check_ins) / len(check_ins)
+        lines.append(
+            f"Recent cravings: {len(check_ins)} recorded, average intensity {average:.1f}/10."
+        )
+        lines.append(
+            "Common triggers: " + ", ".join(f"{name} ({count})" for name, count in triggers) + "."
+        )
+        lines.append(
+            "Coping actions tried: "
+            + ", ".join(f"{name} ({count})" for name, count in actions)
+            + "."
+        )
+    return " ".join(lines)[:1800]
 
 
 @router.post("/devices/register", response_model=DeviceRegistration, status_code=201)
@@ -122,9 +156,26 @@ async def coaching(
     if is_crisis(payload.message):
         response_text, safety = SAFETY_RESPONSE, True
     else:
+        plan = (
+            await db.execute(select(QuitPlan).where(QuitPlan.device_id == device.id))
+        ).scalar_one_or_none()
+        recent_check_ins = list(
+            (
+                await db.execute(
+                    select(CheckIn)
+                    .where(CheckIn.device_id == device.id)
+                    .order_by(CheckIn.occurred_at.desc())
+                    .limit(8)
+                )
+            ).scalars()
+        )
+        profile = _coaching_profile(plan, recent_check_ins)
+        provider_context = payload.recent_context[-8:]
+        if profile:
+            provider_context = [ConversationTurn(role="user", content=profile), *provider_context]
         try:
             response_text, safety = (
-                await provider.respond(payload.message, payload.recent_context),
+                await provider.respond(payload.message, provider_context[-9:]),
                 False,
             )
         except Exception as exc:

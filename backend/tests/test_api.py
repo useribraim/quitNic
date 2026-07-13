@@ -7,7 +7,10 @@ from app.services.coaching import CoachingProvider, get_coaching_provider
 
 
 class FakeCoach(CoachingProvider):
+    last_context = []
+
     async def respond(self, message, context):
+        FakeCoach.last_context = context
         return "Take one slow breath, drink some water, and revisit your reason for quitting."
 
 
@@ -97,6 +100,45 @@ async def test_coaching_and_fixed_safety_response(authenticated):
         )
         assert crisis.json()["is_safety_response"] is True
         assert "emergency services" in crisis.json()["message"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_coaching_receives_bounded_quit_context(authenticated):
+    app.dependency_overrides[get_coaching_provider] = FakeCoach
+    try:
+        await authenticated.put(
+            "/v1/quit-plan",
+            json={
+                "nicotine_type": "cigarettes",
+                "daily_consumption": 10,
+                "unit_cost": 0.75,
+                "quit_date": (datetime.now(UTC) - timedelta(days=2)).isoformat(),
+                "motivation": "Be more present with my family",
+                "reminder_hour": 20,
+            },
+        )
+        await authenticated.post(
+            "/v1/check-ins",
+            json={
+                "intensity": 7,
+                "trigger": "After dinner",
+                "coping_action": "Walk",
+                "note": None,
+                "resisted": True,
+                "occurred_at": datetime.now(UTC).isoformat(),
+            },
+            headers={"Idempotency-Key": "coach-context-123"},
+        )
+        response = await authenticated.post(
+            "/v1/coaching/messages", json={"message": "I have a craving", "recent_context": []}
+        )
+        assert response.status_code == 200
+        joined = " ".join(turn.content for turn in FakeCoach.last_context)
+        assert "quit journey day" in joined
+        assert "After dinner" in joined
+        assert "Walk" in joined
     finally:
         app.dependency_overrides.clear()
 
