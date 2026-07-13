@@ -28,7 +28,7 @@ struct DashboardView: View {
             title: current.title,
             detail: current.detail,
             fraction: fraction,
-            remainingText: remaining < 48 ? "(remaining) hours to go" : "(Int(ceil(Double(remaining) / 24))) days to go"
+            remainingText: remaining < 48 ? "\(remaining) hours to go" : "\(Int(ceil(Double(remaining) / 24))) days to go"
         )
     }
 
