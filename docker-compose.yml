@@ -13,13 +13,13 @@ services:
     volumes: ["postgres-data:/var/lib/postgresql/data"]
   api:
     build: ./backend
+    env_file:
+      - ./backend/.env
     environment:
       DATABASE_URL: postgresql+asyncpg://quitnic:local-password@db:5432/quitnic
       TOKEN_PEPPER: local-development-pepper
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     ports: ["8000:8000"]
     depends_on:
       db: {condition: service_healthy}
 volumes:
   postgres-data:
-
