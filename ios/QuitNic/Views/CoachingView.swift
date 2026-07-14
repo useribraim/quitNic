@@ -5,6 +5,7 @@ import SwiftUI
 struct CoachingView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \ChatMessage.createdAt) private var messages: [ChatMessage]
+    @Query private var plans: [QuitPlan]
     @State private var model = CoachingViewModel()
     private let prompts = ["I’m having a craving", "Help me plan the next hour", "I feel like I might slip"]
 
@@ -46,10 +47,14 @@ struct CoachingView: View {
         }.padding(.horizontal, 16).padding(.vertical, 12).background(.ultraThinMaterial)
     }
 
-    private func errorBanner(_ error: String) -> some View { HStack(alignment: .top, spacing: 10) { Image(systemName: "wifi.exclamationmark").foregroundStyle(.orange); VStack(alignment: .leading, spacing: 3) { Text("Coach is unavailable").font(.subheadline.weight(.semibold)); Text(error).font(.caption).foregroundStyle(QuitNicTheme.secondaryInk) }; Spacer(); Button("Retry") { Task { await retry() } }.font(.subheadline.weight(.semibold)) }.padding(12).background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 14)).padding(.horizontal, 16).padding(.bottom, 8) }
+    private func errorBanner(_ error: String) -> some View { HStack(alignment: .top, spacing: 10) { Image(systemName: model.requiresReconnect ? "key.fill" : "wifi.exclamationmark").foregroundStyle(.orange); VStack(alignment: .leading, spacing: 3) { Text(model.requiresReconnect ? "Reconnect Coach" : "Coach is unavailable").font(.subheadline.weight(.semibold)); Text(error).font(.caption).foregroundStyle(QuitNicTheme.secondaryInk) }; Spacer(); Button(model.requiresReconnect ? "Reconnect" : "Retry") { Task { if model.requiresReconnect { await reconnect() } else { await retry() } } }.font(.subheadline.weight(.semibold)).disabled(model.isLoading) }.padding(12).background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 14)).padding(.horizontal, 16).padding(.bottom, 8) }
     private func persist(_ message: ChatMessage) { context.insert(message); try? context.save() }
     private func send() async { await model.send(messages: messages, save: persist) }
     private func retry() async { await model.retry(messages: messages, save: persist) }
+    private func reconnect() async {
+        guard let plan = plans.first else { return }
+        await model.reconnectAndRetry(messages: messages, plan: plan, context: context, save: persist)
+    }
 }
 
 private struct PromptButtonStyle: ButtonStyle {
