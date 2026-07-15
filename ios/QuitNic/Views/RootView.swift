@@ -34,7 +34,7 @@ struct MainTabView: View {
             CheckInView()
                 .tabItem { Label("Rescue", systemImage: "wind") }
                 .tag(Tab.checkIn)
-            CoachingView()
+            CoachingView(onOpenRescue: { selection = .checkIn })
                 .tabItem { Label("Coach", systemImage: "message.fill") }
                 .tag(Tab.coach)
             ProgressView(plan: plan)

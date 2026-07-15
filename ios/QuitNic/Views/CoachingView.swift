@@ -11,6 +11,9 @@ struct CoachingView: View {
     @Query private var plans: [QuitPlan]
     @State private var model = CoachingViewModel()
     @State private var speech = PushToTalkController()
+    @State private var delayEndsAt: Date?
+    @State private var now = Date()
+    let onOpenRescue: () -> Void
     private let prompts = ["I’m having a craving", "Help me plan the next hour", "I feel like I might slip"]
 
     var body: some View {
@@ -28,11 +31,13 @@ struct CoachingView: View {
                     .onChange(of: messages.count) { _, _ in if let id = messages.last?.id { withAnimation { proxy.scrollTo(id, anchor: .bottom) } } }
                 }
                 if let error = model.errorMessage { errorBanner(error) }
+                if messages.last?.role == "assistant" { currentPlan }
                 composer
             }
             .background(QuitNicTheme.warmBackground.ignoresSafeArea())
             .navigationTitle("Coach")
             .navigationBarTitleDisplayMode(.large)
+            .task { while !Task.isCancelled { try? await Task.sleep(for: .seconds(1)); now = .now } }
         }
     }
 
@@ -74,6 +79,44 @@ struct CoachingView: View {
         .background(.ultraThinMaterial)
     }
 
+    private var currentPlan: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label("Current plan", systemImage: "checkmark.circle.fill")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(QuitNicTheme.teal)
+                Spacer()
+                if let delayEndsAt, delayEndsAt > now {
+                    Text("Delay \(remainingDelay(until: delayEndsAt))")
+                        .font(.caption.weight(.bold).monospacedDigit())
+                        .foregroundStyle(QuitNicTheme.teal)
+                }
+            }
+            Text("Pause · breathe slowly · change location")
+                .font(.subheadline)
+                .foregroundStyle(QuitNicTheme.ink)
+            HStack(spacing: 8) {
+                Button(delayEndsAt != nil && (delayEndsAt ?? .distantPast) > now ? "Delay running" : "Start 5-min delay") {
+                    delayEndsAt = now.addingTimeInterval(300)
+                }
+                .buttonStyle(CoachActionButtonStyle(tint: QuitNicTheme.teal))
+                .disabled(delayEndsAt != nil && (delayEndsAt ?? .distantPast) > now)
+                Button("Open Rescue") { onOpenRescue() }
+                    .buttonStyle(CoachActionButtonStyle(tint: QuitNicTheme.navy))
+            }
+        }
+        .padding(14)
+        .background(QuitNicTheme.teal.opacity(0.08), in: RoundedRectangle(cornerRadius: 18))
+        .padding(.horizontal, 16)
+        .padding(.bottom, 6)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func remainingDelay(until date: Date) -> String {
+        let seconds = max(0, Int(date.timeIntervalSince(now)))
+        return String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+
     private func errorBanner(_ error: String) -> some View { HStack(alignment: .top, spacing: 10) { Image(systemName: model.requiresReconnect ? "key.fill" : "wifi.exclamationmark").foregroundStyle(.orange); VStack(alignment: .leading, spacing: 3) { Text(model.requiresReconnect ? "Reconnect Coach" : "Coach is unavailable").font(.subheadline.weight(.semibold)); Text(error).font(.caption).foregroundStyle(QuitNicTheme.secondaryInk) }; Spacer(); Button(model.requiresReconnect ? "Reconnect" : "Retry") { Task { if model.requiresReconnect { await reconnect() } else { await retry() } } }.font(.subheadline.weight(.semibold)).disabled(model.isLoading) }.padding(12).background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 14)).padding(.horizontal, 16).padding(.bottom, 8) }
     private func persist(_ message: ChatMessage) { context.insert(message); try? context.save() }
     private func send() async { await model.send(messages: messages, save: persist) }
@@ -100,6 +143,19 @@ struct CoachingView: View {
         } else {
             model.draft = speech.transcript
         }
+    }
+}
+
+private struct CoachActionButtonStyle: ButtonStyle {
+    let tint: Color
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.caption.weight(.bold))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(tint.opacity(configuration.isPressed ? 0.20 : 0.12), in: Capsule())
     }
 }
 
