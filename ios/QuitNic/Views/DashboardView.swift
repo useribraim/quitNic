@@ -39,6 +39,7 @@ struct DashboardView: View {
                     HeaderView(dayNumber: dayNumber, hasStarted: progress.seconds > 0)
                     MotivationCard(motivation: plan.motivation)
                     TimelineCard(seconds: progress.seconds)
+                    TodayPlanCard(hour: Calendar.current.component(.hour, from: now))
                     Button(action: onCheckIn) {
                         Label("I need help now", systemImage: "wind.circle.fill")
                     }
@@ -100,11 +101,53 @@ private struct MotivationCard: View {
                 .foregroundStyle(QuitNicTheme.teal)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 5) {
-                Text("Your reason")
+                Text("You chose this for")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(QuitNicTheme.secondaryInk)
                 Text(motivation)
                     .font(.headline)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .quitNicCard()
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct TodayPlanCard: View {
+    let hour: Int
+
+    private var plan: (title: String, detail: String, icon: String) {
+        switch hour {
+        case 5..<11:
+            ("Protect your morning", "Before your usual first trigger, drink water and take a two-minute walk.", "sunrise.fill")
+        case 11..<15:
+            ("After lunch plan", "Before acting on an urge, change location for five minutes and let the wave pass.", "fork.knife")
+        case 15..<20:
+            ("Protect your afternoon", "Keep a simple alternative ready: water, fresh air, or a message to someone supportive.", "figure.walk")
+        default:
+            ("Ease into tonight", "Set up one small comfort routine now so you do not have to decide during a craving.", "moon.stars.fill")
+        }
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: plan.icon)
+                .font(.headline)
+                .foregroundStyle(QuitNicTheme.teal)
+                .frame(width: 36, height: 36)
+                .background(QuitNicTheme.teal.opacity(0.12), in: Circle())
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("YOUR NEXT STEP")
+                    .font(.caption.weight(.bold))
+                    .tracking(1.1)
+                    .foregroundStyle(QuitNicTheme.teal)
+                Text(plan.title).font(.headline)
+                Text(plan.detail)
+                    .font(.subheadline)
+                    .foregroundStyle(QuitNicTheme.secondaryInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
