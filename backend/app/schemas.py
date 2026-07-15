@@ -86,6 +86,10 @@ class CoachingResponse(BaseModel):
     is_safety_response: bool = False
 
 
+class TranscriptionResponse(BaseModel):
+    text: str
+
+
 class Milestone(BaseModel):
     title: str
     target_hours: int

@@ -2,7 +2,7 @@ from collections import Counter
 from datetime import UTC, datetime
 from math import ceil
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile, status
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,10 +23,13 @@ from ..schemas import (
     ProgressResponse,
     QuitPlanInput,
     QuitPlanOutput,
+    TranscriptionResponse,
 )
 from ..services.coaching import SAFETY_RESPONSE, CoachingProvider, get_coaching_provider, is_crisis
+from ..services.transcription import OpenAITranscriptionProvider
 
 router = APIRouter(prefix="/v1")
+MAX_TRANSCRIPTION_BYTES = 8 * 1024 * 1024
 
 
 def _coaching_profile(plan: QuitPlan | None, check_ins: list[CheckIn]) -> str | None:
@@ -190,6 +193,31 @@ async def coaching(
     )
     await db.commit()
     return CoachingResponse(message=response_text, is_safety_response=safety)
+
+
+@router.post("/transcriptions", response_model=TranscriptionResponse)
+async def transcribe(
+    audio: UploadFile = File(...),
+    device: DeviceAccount = Depends(current_device),
+) -> TranscriptionResponse:
+    """Transcribe one user-initiated Push-to-Talk clip; never retain its audio."""
+    await coaching_limiter.check(device.id)
+    if not (audio.content_type or "").startswith("audio/"):
+        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Audio file required")
+    content = await audio.read(MAX_TRANSCRIPTION_BYTES + 1)
+    if len(content) > MAX_TRANSCRIPTION_BYTES:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Audio clip is too large")
+    try:
+        text = await OpenAITranscriptionProvider().transcribe(
+            audio.filename or "push-to-talk.m4a", content, audio.content_type or "audio/m4a"
+        )
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "Transcription service temporarily unavailable"
+        ) from exc
+    return TranscriptionResponse(text=text)
 
 
 @router.get("/progress", response_model=ProgressResponse)
