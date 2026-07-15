@@ -25,6 +25,10 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>QuitNic uses the microphone only while you hold Push to Talk to turn your words into a coaching message.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>QuitNic uses on-device speech recognition to turn Push to Talk into text without sending your voice to a server.</string>
 	<key>QuitNicAPIURL</key>
 	<string>$(QUITNIC_API_URL)</string>
 	<key>UILaunchScreen</key>
