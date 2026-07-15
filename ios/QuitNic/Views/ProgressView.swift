@@ -52,8 +52,12 @@ struct ProgressView: View {
                     }
 
                     card("Intensity trend", icon: "chart.line.uptrend.xyaxis") {
-                        Text(trend.count < 2 ? "Complete two Rescue sessions to see your trend." : "Your recorded craving intensity over time.").font(.caption).foregroundStyle(QuitNicTheme.secondaryInk)
-                        if trend.count < 2 { placeholder("Your next Rescue session will add another point here.") } else {
+                        if trend.count < 2 {
+                            TrendPreview(recordedCount: trend.count)
+                        } else {
+                            Text("Your recorded craving intensity over time.")
+                                .font(.caption)
+                                .foregroundStyle(QuitNicTheme.secondaryInk)
                             Chart { ForEach(trend) { point in
                                 LineMark(x: .value("Date", point.date), y: .value("Intensity", point.intensity)).foregroundStyle(QuitNicTheme.teal)
                                 PointMark(x: .value("Date", point.date), y: .value("Intensity", point.intensity)).foregroundStyle(QuitNicTheme.teal)
@@ -97,6 +101,40 @@ struct ProgressView: View {
     private func metric(_ value: String, _ label: String, _ icon: String, _ tint: Color) -> some View { VStack(alignment: .leading, spacing: 5) { Image(systemName: icon).foregroundStyle(tint); Text(value).font(.system(.title3, design: .rounded, weight: .bold)); Text(label).font(.caption).foregroundStyle(QuitNicTheme.secondaryInk) }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 4) }
     private func placeholder(_ text: String) -> some View { Text(text).font(.subheadline).foregroundStyle(QuitNicTheme.secondaryInk).fixedSize(horizontal: false, vertical: true).padding(.vertical, 4) }
     private func loadProgress() async { serverProgress = ResponseCache.get(ProgressResponse.self, key: "progress", context: context); guard KeychainStore.readToken() != nil else { return }; if let fresh = try? await APIClient.shared.progress() { serverProgress = fresh; try? ResponseCache.put(fresh, key: "progress", lifetime: 300, context: context) } }
+}
+
+private struct TrendPreview: View {
+    let recordedCount: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .bottom, spacing: 10) {
+                ForEach(0..<4, id: \.self) { index in
+                    VStack(spacing: 6) {
+                        Circle()
+                            .fill(index < recordedCount ? QuitNicTheme.teal : QuitNicTheme.teal.opacity(0.18))
+                            .frame(width: 10, height: 10)
+                        Capsule()
+                            .fill(QuitNicTheme.teal.opacity(index < recordedCount ? 0.45 : 0.12))
+                            .frame(height: [48, 76, 38, 62][index])
+                    }
+                    .frame(maxWidth: .infinity, alignment: .bottom)
+                }
+            }
+            .frame(height: 96)
+            .padding(.horizontal, 10)
+            Text(recordedCount == 0
+                 ? "Your first Rescue check-in creates the baseline. One more unlocks your trend."
+                 : "One more Rescue check-in unlocks your intensity trend.")
+                .font(.subheadline)
+                .foregroundStyle(QuitNicTheme.secondaryInk)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(recordedCount == 0
+                            ? "Intensity trend preview. Your first Rescue check-in creates the baseline."
+                            : "Intensity trend preview. One more Rescue check-in unlocks the trend.")
+    }
 }
 
 private struct TrendPoint: Identifiable { let date: Date; let intensity: Int; var id: Date { date } }
