@@ -37,6 +37,31 @@ actor APIClient {
     func progress() async throws -> ProgressResponse { try await send(path: "/v1/progress", method: "GET", body: Optional<String>.none) }
     func post(checkIn: CheckInRequest, idempotencyKey: String) async throws -> CheckInResponse { try await send(path: "/v1/check-ins", method: "POST", body: checkIn, extraHeaders: ["Idempotency-Key": idempotencyKey]) }
     func coach(_ request: CoachingRequest) async throws -> CoachingResponse { try await send(path: "/v1/coaching/messages", method: "POST", body: request) }
+    func transcribe(audioURL: URL) async throws -> TranscriptionResponse {
+        let boundary = "QuitNic-\(UUID().uuidString)"
+        let audio = try Data(contentsOf: audioURL)
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"audio\"; filename=\"push-to-talk.m4a\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: audio/m4a\r\n\r\n".data(using: .utf8)!)
+        body.append(audio)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+
+        var request = URLRequest(url: baseURL.appending(path: "/v1/transcriptions"))
+        request.httpMethod = "POST"
+        request.timeoutInterval = 30
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        guard let token = KeychainStore.readToken() else { throw APIError.unauthorized }
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.httpBody = body
+        let data: Data; let response: URLResponse
+        do { (data, response) = try await session.data(for: request) }
+        catch { throw APIError.transport(error.localizedDescription) }
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        switch http.statusCode { case 200..<300: break; case 401: throw APIError.unauthorized; case 429: throw APIError.rateLimited; default: throw APIError.server(http.statusCode) }
+        do { return try decoder.decode(TranscriptionResponse.self, from: data) }
+        catch { throw APIError.decoding }
+    }
     func deleteAccount() async throws { let _: [String: Bool] = try await send(path: "/v1/account", method: "DELETE", body: Optional<String>.none) }
 
     private func send<Response: Decodable, Body: Encodable>(path: String, method: String, body: Body?, authenticated: Bool = true, extraHeaders: [String: String] = [:]) async throws -> Response {

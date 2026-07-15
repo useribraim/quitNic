@@ -7,7 +7,7 @@ struct CheckInResponse: Codable, Identifiable { let id: String; let intensity: I
 struct ConversationTurn: Codable { let role: String; let content: String }
 struct CoachingRequest: Codable { let message: String; let recentContext: [ConversationTurn] }
 struct CoachingResponse: Codable { let message: String; let isSafetyResponse: Bool }
+struct TranscriptionResponse: Codable { let text: String }
 struct MilestoneDTO: Codable { let title: String; let targetHours: Int; let achieved: Bool }
 struct ProgressResponse: Codable { let nicotineFreeSeconds: Int; let moneySaved: Double; let avoidedUnits: Double; let currentStreakDays: Int; let nextMilestone: MilestoneDTO? }
 struct ErrorEnvelope: Codable { struct Detail: Codable { let code: String; let message: String }; let error: Detail }
-
