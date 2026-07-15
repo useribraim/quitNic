@@ -1,6 +1,10 @@
 import UserNotifications
 
 enum NotificationService {
+    static func authorizationStatus() async -> UNAuthorizationStatus {
+        await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+    }
+
     static func scheduleDaily(hour: Int) async throws {
         let center = UNUserNotificationCenter.current()
         let allowed = try await center.requestAuthorization(options: [.alert, .sound, .badge])
@@ -12,4 +16,3 @@ enum NotificationService {
     }
     static func removeAll() { UNUserNotificationCenter.current().removeAllPendingNotificationRequests() }
 }
-
