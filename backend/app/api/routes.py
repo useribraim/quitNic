@@ -231,7 +231,18 @@ async def progress(
         raise HTTPException(404, "Quit plan not found")
     now = datetime.now(UTC)
     quit_date = plan.quit_date if plan.quit_date.tzinfo else plan.quit_date.replace(tzinfo=UTC)
-    seconds = max(0, int((now - quit_date).total_seconds()))
+    last_use = (
+        await db.execute(
+            select(CheckIn.occurred_at)
+            .where(CheckIn.device_id == device.id, CheckIn.used_nicotine.is_(True))
+            .order_by(CheckIn.occurred_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if last_use is not None and last_use.tzinfo is None:
+        last_use = last_use.replace(tzinfo=UTC)
+    start_date = max(quit_date, last_use if last_use is not None else quit_date)
+    seconds = max(0, int((now - start_date).total_seconds()))
     days = seconds / 86400
     milestones = [
         ("First day", 24),
@@ -254,6 +265,15 @@ async def progress(
         current_streak_days=max(0, ceil(days)),
         next_milestone=next_milestone,
     )
+
+
+@router.delete("/coaching/messages", response_model=DeleteResponse)
+async def delete_coaching_messages(
+    device: DeviceAccount = Depends(current_device), db: AsyncSession = Depends(get_db)
+) -> DeleteResponse:
+    await db.execute(delete(CoachingMessage).where(CoachingMessage.device_id == device.id))
+    await db.commit()
+    return DeleteResponse(deleted=True)
 
 
 @router.delete("/account", response_model=DeleteResponse)

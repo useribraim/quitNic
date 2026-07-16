@@ -7,6 +7,10 @@ struct CheckInView: View {
         case welcome, assess, reset, reflect, complete
     }
 
+    private enum Outcome {
+        case resisted, usedNicotine
+    }
+
     private let triggers = ["Stress", "Coffee", "Social", "Boredom", "After a meal", "Other"]
     private let intervention = "Two-minute breathing reset"
     private let fullDuration = 120
@@ -16,7 +20,7 @@ struct CheckInView: View {
     @State private var startingIntensity = 5.0
     @State private var endingIntensity = 5.0
     @State private var selectedTrigger: String?
-    @State private var resisted = true
+    @State private var outcome: Outcome?
     @State private var secondsRemaining = 120
     @State private var startedAt = Date()
     @State private var breathingExpanded = false
@@ -225,31 +229,28 @@ struct CheckInView: View {
             IntensityControl(title: "Intensity after reset", value: $endingIntensity)
                 .quitNicCard()
 
-            Button {
-                resisted.toggle()
-                UISelectionFeedbackGenerator().selectionChanged()
-            } label: {
-                HStack(spacing: 13) {
-                    Image(systemName: resisted ? "checkmark.circle.fill" : "circle")
-                        .font(.title2)
-                        .foregroundStyle(resisted ? QuitNicTheme.teal : QuitNicTheme.secondaryInk)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("I resisted the craving")
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                        Text("Tap to change the outcome")
-                            .font(.caption)
-                            .foregroundStyle(QuitNicTheme.secondaryInk)
-                    }
-                    Spacer()
-                }
-                .quitNicCard()
+            VStack(alignment: .leading, spacing: 10) {
+                Text("What happened next?")
+                    .font(.headline)
+                OutcomeChoice(
+                    title: "I resisted the craving",
+                    detail: "You did not use nicotine this time.",
+                    icon: "checkmark.circle.fill",
+                    isSelected: outcome == .resisted
+                ) { outcome = .resisted }
+                OutcomeChoice(
+                    title: "I used nicotine",
+                    detail: "No judgement. This helps keep your progress honest.",
+                    icon: "arrow.counterclockwise.circle.fill",
+                    isSelected: outcome == .usedNicotine
+                ) { outcome = .usedNicotine }
             }
-            .buttonStyle(.plain)
-            .accessibilityValue(resisted ? "Selected" : "Not selected")
+            .quitNicCard()
 
             Button("Save result") { save() }
                 .buttonStyle(QuitNicPrimaryButtonStyle())
+                .disabled(outcome == nil)
+                .opacity(outcome == nil ? 0.45 : 1)
                 .accessibilityIdentifier("saveRescueButton")
         }
     }
@@ -338,6 +339,7 @@ struct CheckInView: View {
             copingAction: intervention,
             note: "Intensity after reset: \(Int(endingIntensity))/10",
             resisted: resisted,
+            usedNicotine: usedNicotine,
             occurredAt: startedAt
         )
         context.insert(session)
@@ -354,9 +356,49 @@ struct CheckInView: View {
         startingIntensity = 5
         endingIntensity = 5
         selectedTrigger = nil
-        resisted = true
+        outcome = nil
         secondsRemaining = fullDuration
         breathingExpanded = false
+    }
+}
+
+private extension CheckInView {
+    var resisted: Bool { outcome == .resisted }
+    var usedNicotine: Bool? {
+        switch outcome {
+        case .resisted: false
+        case .usedNicotine: true
+        case nil: nil
+        }
+    }
+}
+
+private struct OutcomeChoice: View {
+    let title: String
+    let detail: String
+    let icon: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundStyle(isSelected ? QuitNicTheme.teal : QuitNicTheme.secondaryInk)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                    Text(detail).font(.caption).foregroundStyle(QuitNicTheme.secondaryInk)
+                }
+                Spacer()
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isSelected ? QuitNicTheme.teal : QuitNicTheme.secondaryInk)
+            }
+            .padding(12)
+            .background(isSelected ? QuitNicTheme.teal.opacity(0.10) : Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
     }
 }
 

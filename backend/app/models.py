@@ -64,6 +64,7 @@ class CheckIn(Base):
     coping_action: Mapped[str] = mapped_column(String(120))
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     resisted: Mapped[bool] = mapped_column(Boolean)
+    used_nicotine: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     idempotency_key: Mapped[str] = mapped_column(String(80))
 

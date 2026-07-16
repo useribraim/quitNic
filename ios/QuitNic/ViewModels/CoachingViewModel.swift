@@ -85,6 +85,7 @@ final class CoachingViewModel {
                 copingAction: checkIn.copingAction,
                 note: checkIn.note,
                 resisted: checkIn.resisted,
+                usedNicotine: checkIn.usedNicotine,
                 occurredAt: checkIn.occurredAt
             )
             _ = try await APIClient.shared.post(checkIn: request, idempotencyKey: checkIn.id.uuidString)

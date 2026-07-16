@@ -1,5 +1,6 @@
 import SwiftData
 import SwiftUI
+import UIKit
 import UserNotifications
 
 enum TranscriptionMode: String, CaseIterable, Identifiable {
@@ -23,6 +24,7 @@ struct SettingsView: View {
     @State private var reminderHour: Int
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     @State private var confirmDelete = false
+    @State private var confirmDeleteHistory = false
     @State private var showPrivacyDetails = false
     @State private var showPlanEditor = false
     @State private var errorMessage: String?
@@ -60,6 +62,10 @@ struct SettingsView: View {
                         Text("Notifications are off. You can enable them in iPhone Settings when you are ready.")
                             .font(.footnote)
                             .foregroundStyle(QuitNicTheme.secondaryInk)
+                        Button("Open iPhone Settings") {
+                            guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                            UIApplication.shared.open(url)
+                        }
                     }
                 }
 
@@ -82,6 +88,7 @@ struct SettingsView: View {
                 Section("Privacy") {
                     Text("Your plan and check-ins remain on this device. Coaching messages use the QuitNic service and its configured AI provider. QuitNic is supportive coaching, not medical care.")
                     Button("Read privacy details") { showPrivacyDetails = true }
+                    Button("Delete coaching history everywhere", role: .destructive) { confirmDeleteHistory = true }
                     Button("Delete account and local data", role: .destructive) { confirmDelete = true }
                 }
 
@@ -115,6 +122,12 @@ struct SettingsView: View {
                 Button("Delete permanently", role: .destructive) { Task { await deleteAll() } }
                 Button("Cancel", role: .cancel) {}
             } message: { Text("This cannot be undone.") }
+            .confirmationDialog("Delete coaching history everywhere?", isPresented: $confirmDeleteHistory, titleVisibility: .visible) {
+                Button("Delete coaching history", role: .destructive) { Task { await deleteCoachingHistory() } }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This deletes coaching messages from this device and the QuitNic service. Your quit plan and Rescue history stay intact.")
+            }
         }
     }
 
@@ -136,6 +149,22 @@ struct SettingsView: View {
         try? context.save()
         if reminderEnabled { try? await NotificationService.scheduleDaily(hour: reminderHour) }
         else { NotificationService.removeAll() }
+        do {
+            if KeychainStore.readToken() != nil {
+                try await APIClient.shared.save(plan: QuitPlanRequest(
+                    nicotineType: plan.nicotineType,
+                    dailyConsumption: plan.dailyConsumption,
+                    unitCost: plan.unitCost,
+                    quitDate: plan.quitDate,
+                    motivation: plan.motivation,
+                    reminderHour: plan.reminderHour
+                ))
+            } else {
+                try OutboxService.enqueue(plan: plan, context: context)
+            }
+        } catch {
+            try? OutboxService.enqueue(plan: plan, context: context)
+        }
         notificationStatus = await NotificationService.authorizationStatus()
     }
 
@@ -160,6 +189,7 @@ struct SettingsView: View {
         }
         do {
             try context.delete(model: ChatMessage.self)
+            try context.delete(model: ActiveCoachingPlan.self)
             try context.delete(model: CravingCheckIn.self)
             try context.delete(model: RescueSession.self)
             try context.delete(model: PendingOperation.self)
@@ -169,6 +199,21 @@ struct SettingsView: View {
             KeychainStore.deleteToken()
             NotificationService.removeAll()
         } catch { errorMessage = "Local data could not be deleted." }
+    }
+
+    private func deleteCoachingHistory() async {
+        do {
+            try await APIClient.shared.deleteCoachingHistory()
+        } catch {
+            errorMessage = "Coaching history could not be deleted from the service. Nothing was removed locally."
+            return
+        }
+        do {
+            try context.delete(model: ChatMessage.self)
+            try context.save()
+        } catch {
+            errorMessage = "Coaching history was deleted from the service, but could not be removed from this device."
+        }
     }
 }
 
@@ -268,6 +313,7 @@ private struct EditQuitPlanView: View {
             }
             dismiss()
         } catch {
+            try? OutboxService.enqueue(plan: plan, context: context)
             saveMessage = "Saved on this device. The service will update when it is available."
         }
     }

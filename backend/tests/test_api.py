@@ -56,6 +56,40 @@ async def test_quit_plan_progress_and_check_in_idempotency(authenticated):
 
 
 @pytest.mark.asyncio
+async def test_nicotine_use_resets_server_progress(authenticated):
+    quit_date = datetime.now(UTC) - timedelta(days=4)
+    await authenticated.put(
+        "/v1/quit-plan",
+        json={
+            "nicotine_type": "cigarettes",
+            "daily_consumption": 10,
+            "unit_cost": 0.75,
+            "quit_date": quit_date.isoformat(),
+            "motivation": "More energy",
+            "reminder_hour": None,
+        },
+    )
+    lapse_at = datetime.now(UTC) - timedelta(hours=2)
+    response = await authenticated.post(
+        "/v1/check-ins",
+        json={
+            "intensity": 8,
+            "trigger": "Stress",
+            "coping_action": "Pause",
+            "note": None,
+            "resisted": False,
+            "used_nicotine": True,
+            "occurred_at": lapse_at.isoformat(),
+        },
+        headers={"Idempotency-Key": "lapse-progress-123"},
+    )
+    assert response.status_code == 201
+    assert response.json()["used_nicotine"] is True
+    progress = (await authenticated.get("/v1/progress")).json()
+    assert 7_000 <= progress["nicotine_free_seconds"] <= 7_400
+
+
+@pytest.mark.asyncio
 async def test_timestamps_are_rfc3339_utc_for_ios_date_decoding(authenticated):
     quit_date = datetime.now(UTC).replace(microsecond=123456)
     plan = {
@@ -147,3 +181,18 @@ async def test_coaching_receives_bounded_quit_context(authenticated):
 async def test_delete_revokes_access(authenticated):
     assert (await authenticated.delete("/v1/account")).json() == {"deleted": True}
     assert (await authenticated.get("/v1/check-ins")).status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_delete_coaching_history_keeps_account(authenticated):
+    app.dependency_overrides[get_coaching_provider] = FakeCoach
+    try:
+        assert (
+            await authenticated.post(
+                "/v1/coaching/messages", json={"message": "A craving hit", "recent_context": []}
+            )
+        ).status_code == 200
+        assert (await authenticated.delete("/v1/coaching/messages")).json() == {"deleted": True}
+        assert (await authenticated.get("/v1/check-ins")).status_code == 200
+    finally:
+        app.dependency_overrides.clear()

@@ -8,10 +8,10 @@ import SwiftUI
 struct CoachingView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \ChatMessage.createdAt) private var messages: [ChatMessage]
+    @Query(sort: \ActiveCoachingPlan.createdAt, order: .reverse) private var coachingPlans: [ActiveCoachingPlan]
     @Query private var plans: [QuitPlan]
     @State private var model = CoachingViewModel()
     @State private var speech = PushToTalkController()
-    @State private var delayEndsAt: Date?
     @State private var now = Date()
     @State private var showClearConversationConfirmation = false
     @FocusState private var isComposerFocused: Bool
@@ -33,7 +33,8 @@ struct CoachingView: View {
                     .onChange(of: messages.count) { _, _ in if let id = messages.last?.id { withAnimation { proxy.scrollTo(id, anchor: .bottom) } } }
                 }
                 if let error = model.errorMessage { errorBanner(error) }
-                if messages.last?.role == "assistant" { currentPlan }
+                if let activePlan { currentPlan(activePlan) }
+                else if messages.last?.role == "assistant" { planPrompt }
                 composer
             }
             .background(QuitNicTheme.warmBackground.ignoresSafeArea())
@@ -106,30 +107,56 @@ struct CoachingView: View {
         .background(.ultraThinMaterial)
     }
 
-    private var currentPlan: some View {
+    private var activePlan: ActiveCoachingPlan? {
+        coachingPlans.first(where: { $0.completedAt == nil })
+    }
+
+    private var planPrompt: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Make this actionable")
+                .font(.subheadline.weight(.bold))
+            Text("Keep one clear next step available while you move through the craving.")
+                .font(.caption)
+                .foregroundStyle(QuitNicTheme.secondaryInk)
+            Button("Use this as my plan") { createPlanFromLatestReply() }
+                .buttonStyle(CoachActionButtonStyle(tint: QuitNicTheme.teal))
+        }
+        .padding(14)
+        .background(QuitNicTheme.teal.opacity(0.08), in: RoundedRectangle(cornerRadius: 18))
+        .padding(.horizontal, 16)
+        .padding(.bottom, 6)
+    }
+
+    private func currentPlan(_ plan: ActiveCoachingPlan) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Label("Current plan", systemImage: "checkmark.circle.fill")
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(QuitNicTheme.teal)
                 Spacer()
-                if let delayEndsAt, delayEndsAt > now {
+                if let delayEndsAt = plan.delayEndsAt, delayEndsAt > now {
                     Text("Delay \(remainingDelay(until: delayEndsAt))")
                         .font(.caption.weight(.bold).monospacedDigit())
                         .foregroundStyle(QuitNicTheme.teal)
                 }
             }
-            Text("Pause · breathe slowly · change location")
+            Text(plan.summary)
                 .font(.subheadline)
                 .foregroundStyle(QuitNicTheme.ink)
             HStack(spacing: 8) {
-                Button(delayEndsAt != nil && (delayEndsAt ?? .distantPast) > now ? "Delay running" : "Start 5-min delay") {
-                    delayEndsAt = now.addingTimeInterval(300)
+                Button(plan.delayEndsAt != nil && (plan.delayEndsAt ?? .distantPast) > now ? "Delay running" : "Start 5-min delay") {
+                    plan.delayEndsAt = now.addingTimeInterval(300)
+                    try? context.save()
                 }
                 .buttonStyle(CoachActionButtonStyle(tint: QuitNicTheme.teal))
-                .disabled(delayEndsAt != nil && (delayEndsAt ?? .distantPast) > now)
+                .disabled(plan.delayEndsAt != nil && (plan.delayEndsAt ?? .distantPast) > now)
                 Button("Open Rescue") { onOpenRescue() }
                     .buttonStyle(CoachActionButtonStyle(tint: QuitNicTheme.navy))
+                Button("Complete") {
+                    plan.completedAt = .now
+                    try? context.save()
+                }
+                .buttonStyle(CoachActionButtonStyle(tint: QuitNicTheme.secondaryInk))
             }
         }
         .padding(14)
@@ -142,6 +169,16 @@ struct CoachingView: View {
     private func remainingDelay(until date: Date) -> String {
         let seconds = max(0, Int(date.timeIntervalSince(now)))
         return String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+
+    private func createPlanFromLatestReply() {
+        guard let reply = messages.last(where: { $0.role == "assistant" }) else { return }
+        let compact = reply.content
+            .split(whereSeparator: { ".!?\n".contains($0) })
+            .prefix(2)
+            .joined(separator: ". ")
+        context.insert(ActiveCoachingPlan(summary: String(compact).prefix(240).description))
+        try? context.save()
     }
 
     private func errorBanner(_ error: String) -> some View { HStack(alignment: .top, spacing: 10) { Image(systemName: model.requiresReconnect ? "key.fill" : "wifi.exclamationmark").foregroundStyle(.orange); VStack(alignment: .leading, spacing: 3) { Text(model.requiresReconnect ? "Reconnect Coach" : "Coach is unavailable").font(.subheadline.weight(.semibold)); Text(error).font(.caption).foregroundStyle(QuitNicTheme.secondaryInk) }; Spacer(); Button(model.requiresReconnect ? "Reconnect" : "Retry") { Task { if model.requiresReconnect { await reconnect() } else { await retry() } } }.font(.subheadline.weight(.semibold)).disabled(model.isLoading) }.padding(12).background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 14)).padding(.horizontal, 16).padding(.bottom, 8) }

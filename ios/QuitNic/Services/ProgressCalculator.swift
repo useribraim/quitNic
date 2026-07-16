@@ -5,12 +5,12 @@ struct LocalProgress {
 }
 
 enum ProgressCalculator {
-    static func calculate(plan: QuitPlan, now: Date = .now) -> LocalProgress {
-        let seconds = max(0, Int(now.timeIntervalSince(plan.quitDate)))
+    static func calculate(plan: QuitPlan, lastNicotineUse: Date? = nil, now: Date = .now) -> LocalProgress {
+        let startDate = max(plan.quitDate, lastNicotineUse ?? plan.quitDate)
+        let seconds = max(0, Int(now.timeIntervalSince(startDate)))
         let days = Double(seconds) / 86_400
         let milestones = [(24, "First day"), (168, "First week"), (720, "First month"), (2160, "Three months")]
         let next = milestones.first { seconds < $0.0 * 3600 }?.1
         return LocalProgress(seconds: seconds, moneySaved: days * plan.dailyConsumption * plan.unitCost, avoidedUnits: days * plan.dailyConsumption, streakDays: Int(days.rounded(.down)), nextMilestone: next)
     }
 }
-

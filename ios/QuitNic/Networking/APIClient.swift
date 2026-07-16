@@ -73,6 +73,7 @@ actor APIClient {
         catch { throw APIError.decoding }
     }
     func deleteAccount() async throws { let _: [String: Bool] = try await send(path: "/v1/account", method: "DELETE", body: Optional<String>.none) }
+    func deleteCoachingHistory() async throws { let _: DeleteResponse = try await send(path: "/v1/coaching/messages", method: "DELETE", body: Optional<String>.none) }
 
     func healthCheck() async throws {
         var request = URLRequest(url: baseURL.appending(path: "/health"))

@@ -123,6 +123,23 @@ final class OutboxServiceTests: XCTestCase {
         XCTAssertEqual(try context.fetch(FetchDescriptor<PendingOperation>()).count, 0)
     }
 
+    func testPlanEditsCoalesceToOneOfflineOperation() throws {
+        let plan = QuitPlan(nicotineType: "vape", dailyConsumption: 5, unitCost: 1.5, quitDate: .now, motivation: "Sleep", reminderHour: nil)
+        context.insert(plan)
+        try OutboxService.enqueue(plan: plan, context: context)
+        plan.dailyConsumption = 7
+        try OutboxService.enqueue(plan: plan, context: context)
+
+        let operations = try context.fetch(FetchDescriptor<PendingOperation>())
+        XCTAssertEqual(operations.count, 1)
+        XCTAssertEqual(operations.first?.kind, "quit-plan")
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let request = try XCTUnwrap(operations.first.map { try decoder.decode(QuitPlanRequest.self, from: $0.payload) })
+        XCTAssertEqual(request.dailyConsumption, 7)
+    }
+
     // MARK: - Helpers
 
     @discardableResult

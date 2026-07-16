@@ -26,12 +26,31 @@ final class CravingCheckIn {
     var copingAction: String
     var note: String?
     var resisted: Bool
+    var usedNicotine: Bool?
     var occurredAt: Date
     var synced: Bool
 
-    init(id: UUID = UUID(), intensity: Int, trigger: String, copingAction: String, note: String?, resisted: Bool, occurredAt: Date = .now, synced: Bool = false) {
+    init(id: UUID = UUID(), intensity: Int, trigger: String, copingAction: String, note: String?, resisted: Bool, usedNicotine: Bool? = nil, occurredAt: Date = .now, synced: Bool = false) {
         self.id = id; self.intensity = intensity; self.trigger = trigger; self.copingAction = copingAction
         self.note = note; self.resisted = resisted; self.occurredAt = occurredAt; self.synced = synced
+        self.usedNicotine = usedNicotine
+    }
+}
+
+@Model
+final class ActiveCoachingPlan {
+    @Attribute(.unique) var id: UUID
+    var summary: String
+    var createdAt: Date
+    var delayEndsAt: Date?
+    var completedAt: Date?
+
+    init(id: UUID = UUID(), summary: String, createdAt: Date = .now, delayEndsAt: Date? = nil, completedAt: Date? = nil) {
+        self.id = id
+        self.summary = summary
+        self.createdAt = createdAt
+        self.delayEndsAt = delayEndsAt
+        self.completedAt = completedAt
     }
 }
 

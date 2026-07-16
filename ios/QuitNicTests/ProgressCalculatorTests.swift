@@ -19,5 +19,12 @@ final class ProgressCalculatorTests: XCTestCase {
         let plan = QuitPlan(nicotineType: "vape", dailyConsumption: 1, unitCost: 5, quitDate: .now.addingTimeInterval(3600), motivation: "Freedom", reminderHour: nil)
         XCTAssertEqual(ProgressCalculator.calculate(plan: plan).seconds, 0)
     }
-}
 
+    func testLatestNicotineUseRestartsTheTimer() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        let plan = QuitPlan(nicotineType: "cigarettes", dailyConsumption: 10, unitCost: 0.75, quitDate: now.addingTimeInterval(-172_800), motivation: "Health", reminderHour: nil)
+        let result = ProgressCalculator.calculate(plan: plan, lastNicotineUse: now.addingTimeInterval(-3_600), now: now)
+        XCTAssertEqual(result.seconds, 3_600)
+        XCTAssertEqual(result.streakDays, 0)
+    }
+}

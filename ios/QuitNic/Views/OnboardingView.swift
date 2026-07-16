@@ -112,7 +112,10 @@ struct OnboardingView: View {
         do {
             if KeychainStore.readToken() == nil { let registration = try await APIClient.shared.register(); try KeychainStore.saveToken(registration.accessToken) }
             try await APIClient.shared.save(plan: QuitPlanRequest(nicotineType: nicotineType, dailyConsumption: dailyConsumption, unitCost: unitCost, quitDate: quitDate, motivation: motivation, reminderHour: reminders ? reminderHour : nil))
-        } catch { warning = "Your plan is saved on this device and will connect when the service is available." }
+        } catch {
+            try? OutboxService.enqueue(plan: plan, context: context)
+            warning = "Your plan is saved on this device and will connect when the service is available."
+        }
         isSaving = false
     }
 }

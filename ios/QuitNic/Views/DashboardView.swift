@@ -1,10 +1,14 @@
+import SwiftData
 import SwiftUI
 
 struct DashboardView: View {
     let plan: QuitPlan
     let onCheckIn: () -> Void
+    @Query(sort: \CravingCheckIn.occurredAt, order: .reverse) private var checkIns: [CravingCheckIn]
     @State private var now = Date()
-    private var progress: LocalProgress { ProgressCalculator.calculate(plan: plan, now: now) }
+    private var progress: LocalProgress {
+        ProgressCalculator.calculate(plan: plan, lastNicotineUse: checkIns.first(where: { $0.usedNicotine == true })?.occurredAt, now: now)
+    }
 
     private var dayNumber: Int {
         max(1, progress.streakDays + 1)
