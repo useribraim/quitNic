@@ -13,6 +13,7 @@ struct CoachingView: View {
     @State private var speech = PushToTalkController()
     @State private var delayEndsAt: Date?
     @State private var now = Date()
+    @State private var showClearConversationConfirmation = false
     let onOpenRescue: () -> Void
     private let prompts = ["I’m having a craving", "Help me plan the next hour", "I feel like I might slip"]
 
@@ -37,6 +38,21 @@ struct CoachingView: View {
             .background(QuitNicTheme.warmBackground.ignoresSafeArea())
             .navigationTitle("Coach")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Clear chat", systemImage: "trash") {
+                        showClearConversationConfirmation = true
+                    }
+                    .disabled(messages.isEmpty)
+                    .accessibilityHint("Removes this conversation from this device")
+                }
+            }
+            .confirmationDialog("Clear this chat from this device?", isPresented: $showClearConversationConfirmation, titleVisibility: .visible) {
+                Button("Clear chat", role: .destructive) { clearConversation() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This removes the conversation display from this iPhone. Delete your account in Settings to remove server-held account data.")
+            }
             .task { while !Task.isCancelled { try? await Task.sleep(for: .seconds(1)); now = .now } }
         }
     }
@@ -124,6 +140,11 @@ struct CoachingView: View {
     private func reconnect() async {
         guard let plan = plans.first else { return }
         await model.reconnectAndRetry(messages: messages, plan: plan, context: context, save: persist)
+    }
+
+    private func clearConversation() {
+        for message in messages { context.delete(message) }
+        try? context.save()
     }
 
     private var transcriptionMode: TranscriptionMode {
