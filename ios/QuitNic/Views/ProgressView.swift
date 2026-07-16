@@ -47,7 +47,7 @@ struct ProgressView: View {
                     }.accessibilityElement(children: .combine)
 
                     card("Your snapshot", icon: "sparkles") {
-                        HStack { metric(moneySaved.formatted(.currency(code: Locale.current.currency?.identifier ?? "EUR")), "Money saved", "banknote.fill", QuitNicTheme.teal); metric(avoided.formatted(.number.precision(.fractionLength(0))), "Units avoided", "leaf.fill", .green) }
+                        HStack { metric(moneySaved.formatted(.currency(code: "EUR")), "Money saved", "eurosign.circle.fill", QuitNicTheme.teal); metric(avoided.formatted(.number.precision(.fractionLength(0))), "Units avoided", "leaf.fill", .green) }
                         HStack { metric("\(resistanceRate)%", "Cravings resisted", "checkmark.shield.fill", .orange); metric("\(average)/10", "Average intensity", "waveform.path.ecg", .pink) }
                     }
 

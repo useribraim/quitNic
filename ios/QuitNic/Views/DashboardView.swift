@@ -46,7 +46,7 @@ struct DashboardView: View {
                     .buttonStyle(QuitNicPrimaryButtonStyle())
                     .accessibilityHint("Opens the craving check-in screen")
                     LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 12) {
-                        MetricCard(title: "Money saved", value: progress.moneySaved.formatted(.currency(code: Locale.current.currency?.identifier ?? "EUR")), icon: "banknote.fill", tint: QuitNicTheme.teal)
+                        MetricCard(title: "Money saved", value: progress.moneySaved.formatted(.currency(code: "EUR")), icon: "eurosign.circle.fill", tint: QuitNicTheme.teal)
                         MetricCard(title: "Units avoided", value: progress.avoidedUnits.formatted(.number.precision(.fractionLength(0))), icon: "leaf.fill", tint: .green)
                     }
                     MilestoneCard(milestone: milestone)

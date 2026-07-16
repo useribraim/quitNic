@@ -39,16 +39,15 @@ struct OnboardingView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Nicotine type")
                         Picker("Nicotine type", selection: $nicotineType) {
+                            Text("Nicotine Pouches").tag("pouches")
                             Text("Cigarettes").tag("cigarettes")
                             Text("Vape").tag("vape")
-                            Text("Pouches").tag("pouches")
-                            Text("Other").tag("other")
                         }
                         .labelsHidden()
                         .tint(.primary)
                     }
                     Stepper("Daily units: \(Int(dailyConsumption))", value: $dailyConsumption, in: 1...100)
-                    HStack { Text("Cost per unit"); Spacer(); TextField("0.75", value: $unitCost, format: .currency(code: Locale.current.currency?.identifier ?? "EUR")).multilineTextAlignment(.trailing).keyboardType(.decimalPad) }
+                    HStack { Text("Cost per unit"); Spacer(); TextField("0.75", value: $unitCost, format: .currency(code: "EUR")).multilineTextAlignment(.trailing).keyboardType(.decimalPad) }
                     DatePicker("Quit date", selection: $quitDate, displayedComponents: [.date, .hourAndMinute])
                     TextField("Why do you want to quit?", text: $motivation, axis: .vertical)
                         .lineLimit(3...5)

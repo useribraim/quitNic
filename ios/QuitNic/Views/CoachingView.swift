@@ -196,15 +196,30 @@ private struct PushToTalkButton: View {
     let mode: TranscriptionMode
     let onPress: () -> Void
     let onRelease: () -> Void
+    @State private var isPulsing = false
 
     var body: some View {
-        Image(systemName: isRecording ? "mic.fill" : "mic")
-            .font(.headline.weight(.bold))
-            .foregroundStyle(isRecording ? .white : QuitNicTheme.teal)
-            .frame(width: 42, height: 42)
-            .background(isRecording ? .red : QuitNicTheme.teal.opacity(0.12), in: Circle())
-            .scaleEffect(isRecording ? 1.08 : 1)
+        ZStack {
+            Circle()
+                .fill(.red.opacity(0.16))
+                .frame(width: 42, height: 42)
+                .scaleEffect(isRecording && isPulsing ? 1.32 : 1)
+                .opacity(isRecording ? (isPulsing ? 0 : 0.45) : 0)
+            Image(systemName: isRecording ? "mic.fill" : "mic")
+                .font(.headline.weight(.bold))
+                .foregroundStyle(isRecording ? .white : QuitNicTheme.teal)
+                .frame(width: 42, height: 42)
+                .background(isRecording ? .red : QuitNicTheme.teal.opacity(0.12), in: Circle())
+                .scaleEffect(isRecording ? 1.05 : 1)
+        }
             .animation(.easeInOut(duration: 0.16), value: isRecording)
+            .onChange(of: isRecording, initial: true) { _, recording in
+                if recording {
+                    withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { isPulsing = true }
+                } else {
+                    isPulsing = false
+                }
+            }
             .accessibilityLabel(isRecording ? "Recording voice input" : "Push to talk")
             .accessibilityHint(mode == .onDevice ? "Hold to dictate on this device" : "Hold to send a short clip for enhanced cloud transcription")
             .gesture(
