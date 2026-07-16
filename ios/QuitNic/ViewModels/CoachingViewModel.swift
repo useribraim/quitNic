@@ -37,7 +37,15 @@ final class CoachingViewModel {
         errorMessage = nil; isLoading = true
         do {
             let registration = try await APIClient.shared.register()
-            try KeychainStore.saveToken(registration.accessToken)
+            do {
+                try KeychainStore.saveToken(registration.accessToken)
+            } catch {
+                requiresReconnect = true
+                errorMessage = (error as? LocalizedError)?.errorDescription ?? "QuitNic could not securely save your private session. Please restart the app and try again."
+                isLoading = false
+                return
+            }
+            requiresReconnect = false
             try await APIClient.shared.save(plan: QuitPlanRequest(
                 nicotineType: plan.nicotineType,
                 dailyConsumption: plan.dailyConsumption,
@@ -47,11 +55,10 @@ final class CoachingViewModel {
                 reminderHour: plan.reminderHour
             ))
             try await restoreLocalCheckIns(context: context)
-            requiresReconnect = false
             await requestResponse(for: lastFailedMessage, messages: Array(messages.dropLast()), save: save)
         } catch {
-            requiresReconnect = true
-            errorMessage = "Could not reconnect yet. Check your connection and try again."
+            requiresReconnect = (error as? APIError) == .unauthorized
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? "Your session was restored, but QuitNic could not sync yet. Please try again."
         }
         isLoading = false
     }

@@ -17,20 +17,30 @@ enum APIError: LocalizedError, Equatable {
 actor APIClient {
     static let shared = APIClient()
     private let session: URLSession
-    private let baseURL: URL
+    private let baseURLOverride: URL?
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
-    init(baseURL: URL = APIClient.configuredBaseURL, session: URLSession = .shared) {
-        self.baseURL = baseURL; self.session = session
+    init(baseURL: URL? = nil, session: URLSession = .shared) {
+        baseURLOverride = baseURL; self.session = session
         encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601; encoder.keyEncodingStrategy = .convertToSnakeCase
         decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601; decoder.keyDecodingStrategy = .convertFromSnakeCase
     }
 
     nonisolated private static var configuredBaseURL: URL {
+#if DEBUG
+        if let override = UserDefaults.standard.string(forKey: "debugAPIURL"),
+           let url = URL(string: override),
+           let scheme = url.scheme?.lowercased(),
+           ["http", "https"].contains(scheme) {
+            return url
+        }
+#endif
         let configured = Bundle.main.object(forInfoDictionaryKey: "QuitNicAPIURL") as? String
         return URL(string: configured ?? "http://localhost:8000")!
     }
+
+    private var baseURL: URL { baseURLOverride ?? APIClient.configuredBaseURL }
 
     func register() async throws -> RegistrationResponse { try await send(path: "/v1/devices/register", method: "POST", body: Optional<String>.none, authenticated: false) }
     func save(plan: QuitPlanRequest) async throws { let _: QuitPlanRequest = try await send(path: "/v1/quit-plan", method: "PUT", body: plan) }
@@ -63,6 +73,15 @@ actor APIClient {
         catch { throw APIError.decoding }
     }
     func deleteAccount() async throws { let _: [String: Bool] = try await send(path: "/v1/account", method: "DELETE", body: Optional<String>.none) }
+
+    func healthCheck() async throws {
+        var request = URLRequest(url: baseURL.appending(path: "/health"))
+        request.timeoutInterval = 8
+        let (_, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw APIError.invalidResponse
+        }
+    }
 
     private func send<Response: Decodable, Body: Encodable>(path: String, method: String, body: Body?, authenticated: Bool = true, extraHeaders: [String: String] = [:]) async throws -> Response {
         var request = URLRequest(url: baseURL.appending(path: path)); request.httpMethod = method

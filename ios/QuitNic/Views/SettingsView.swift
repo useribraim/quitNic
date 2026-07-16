@@ -25,6 +25,10 @@ struct SettingsView: View {
     @State private var confirmDelete = false
     @State private var showPrivacyDetails = false
     @State private var errorMessage: String?
+#if DEBUG
+    @AppStorage("debugAPIURL") private var debugAPIURL = ""
+    @State private var serviceStatus = "Not checked"
+#endif
 
     init(plan: QuitPlan) {
         self.plan = plan
@@ -76,7 +80,15 @@ struct SettingsView: View {
 
                 #if DEBUG
                 Section("Developer") {
-                    Label("Coach service uses the configured local or production API.", systemImage: "ladybug")
+                    TextField("API URL", text: $debugAPIURL)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.URL)
+                        .autocorrectionDisabled()
+                    Text("For a physical iPhone, enter your Mac’s Wi-Fi address, such as http://192.168.1.24:8000. Your Mac and iPhone must be on the same network.")
+                        .font(.footnote)
+                        .foregroundStyle(QuitNicTheme.secondaryInk)
+                    Button("Check API connection") { Task { await checkAPIConnection() } }
+                    LabeledContent("API status", value: serviceStatus)
                         .font(.footnote)
                         .foregroundStyle(QuitNicTheme.secondaryInk)
                 }
@@ -118,6 +130,18 @@ struct SettingsView: View {
         else { NotificationService.removeAll() }
         notificationStatus = await NotificationService.authorizationStatus()
     }
+
+#if DEBUG
+    private func checkAPIConnection() async {
+        serviceStatus = "Checking…"
+        do {
+            try await APIClient.shared.healthCheck()
+            serviceStatus = "Connected"
+        } catch {
+            serviceStatus = "Unavailable"
+        }
+    }
+#endif
 
     private func deleteAll() async {
         do {

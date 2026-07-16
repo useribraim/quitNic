@@ -64,4 +64,4 @@ Access tokens are random opaque values stored in iOS Keychain; the database stor
 
 ## Release status
 
-The project is a verified local release candidate. AWS deployment and external TestFlight distribution have not happened yet; the production endpoint and example bundle identifier must be replaced before release. See [the TestFlight checklist](docs/testflight.md) for the remaining account-dependent work.
+The project is a verified local release candidate. Replace the production endpoint and example bundle identifier before release. See [the TestFlight checklist](docs/testflight.md) for the remaining account-dependent work.

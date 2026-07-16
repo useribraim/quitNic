@@ -1,13 +1,34 @@
 import Foundation
 import Security
 
+enum KeychainStoreError: LocalizedError {
+    case unavailable(OSStatus)
+
+    var errorDescription: String? {
+        "QuitNic could not securely save your private session. Please restart the app and try again."
+    }
+}
+
 enum KeychainStore {
     private static let service = "com.example.QuitNic"
     private static let account = "anonymous-access-token"
     static func saveToken(_ token: String) throws {
-        deleteToken()
-        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account, kSecValueData as String: Data(token.utf8), kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly]
-        guard SecItemAdd(query as CFDictionary, nil) == errSecSuccess else { throw APIError.unauthorized }
+        let lookup: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+        let attributes: [String: Any] = [
+            kSecValueData as String: Data(token.utf8),
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ]
+
+        let updateStatus = SecItemUpdate(lookup as CFDictionary, attributes as CFDictionary)
+        if updateStatus == errSecSuccess { return }
+        guard updateStatus == errSecItemNotFound else { throw KeychainStoreError.unavailable(updateStatus) }
+
+        let addStatus = SecItemAdd((lookup.merging(attributes) { _, new in new }) as CFDictionary, nil)
+        guard addStatus == errSecSuccess else { throw KeychainStoreError.unavailable(addStatus) }
     }
     static func readToken() -> String? {
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account, kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitOne]
@@ -18,4 +39,3 @@ enum KeychainStore {
         SecItemDelete([kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account] as CFDictionary)
     }
 }
-
