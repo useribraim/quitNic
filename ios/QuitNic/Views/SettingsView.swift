@@ -24,6 +24,7 @@ struct SettingsView: View {
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     @State private var confirmDelete = false
     @State private var showPrivacyDetails = false
+    @State private var showPlanEditor = false
     @State private var errorMessage: String?
 #if DEBUG
     @AppStorage("debugAPIURL") private var debugAPIURL = ""
@@ -39,6 +40,12 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Your plan") {
+                    LabeledContent("Quitting", value: plan.nicotineType.displayName)
+                    LabeledContent("Quit date", value: plan.quitDate.formatted(date: .abbreviated, time: .shortened))
+                    Button("Edit quit plan") { showPlanEditor = true }
+                }
+
                 Section("Reminders") {
                     Toggle("Daily check-in", isOn: $reminderEnabled)
                     if reminderEnabled {
@@ -103,6 +110,7 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .task { notificationStatus = await NotificationService.authorizationStatus() }
             .sheet(isPresented: $showPrivacyDetails) { PrivacyDetailsView() }
+            .sheet(isPresented: $showPlanEditor) { EditQuitPlanView(plan: plan) }
             .confirmationDialog("Delete all QuitNic data?", isPresented: $confirmDelete, titleVisibility: .visible) {
                 Button("Delete permanently", role: .destructive) { Task { await deleteAll() } }
                 Button("Cancel", role: .cancel) {}
@@ -161,6 +169,107 @@ struct SettingsView: View {
             KeychainStore.deleteToken()
             NotificationService.removeAll()
         } catch { errorMessage = "Local data could not be deleted." }
+    }
+}
+
+private extension String {
+    var displayName: String {
+        switch self {
+        case "pouches": "Nicotine Pouches"
+        case "cigarettes": "Cigarettes"
+        case "vape": "Vape"
+        default: "Cigarettes"
+        }
+    }
+}
+
+private struct EditQuitPlanView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
+    let plan: QuitPlan
+
+    @State private var nicotineType: String
+    @State private var dailyConsumption: Double
+    @State private var unitCost: Double
+    @State private var quitDate: Date
+    @State private var motivation: String
+    @State private var saveMessage: String?
+
+    init(plan: QuitPlan) {
+        self.plan = plan
+        let supportedTypes = ["pouches", "cigarettes", "vape"]
+        _nicotineType = State(initialValue: supportedTypes.contains(plan.nicotineType) ? plan.nicotineType : "cigarettes")
+        _dailyConsumption = State(initialValue: plan.dailyConsumption)
+        _unitCost = State(initialValue: plan.unitCost)
+        _quitDate = State(initialValue: plan.quitDate)
+        _motivation = State(initialValue: plan.motivation)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("What you’re quitting") {
+                    Picker("Nicotine type", selection: $nicotineType) {
+                        Text("Nicotine Pouches").tag("pouches")
+                        Text("Cigarettes").tag("cigarettes")
+                        Text("Vape").tag("vape")
+                    }
+                    Stepper("Daily units: \(Int(dailyConsumption))", value: $dailyConsumption, in: 1...100)
+                    HStack {
+                        Text("Cost per unit")
+                        Spacer()
+                        TextField("0.75", value: $unitCost, format: .currency(code: "EUR"))
+                            .multilineTextAlignment(.trailing)
+                            .keyboardType(.decimalPad)
+                    }
+                }
+                Section("Your reason") {
+                    DatePicker("Quit date", selection: $quitDate, displayedComponents: [.date, .hourAndMinute])
+                    TextField("Why do you want to quit?", text: $motivation, axis: .vertical)
+                        .lineLimit(3...5)
+                }
+                if let saveMessage {
+                    Text(saveMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                }
+            }
+            .navigationTitle("Edit quit plan")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .topBarTrailing) { Button("Save") { Task { await save() } } }
+            }
+        }
+    }
+
+    @MainActor private func save() async {
+        plan.nicotineType = nicotineType
+        plan.dailyConsumption = dailyConsumption
+        plan.unitCost = unitCost
+        plan.quitDate = quitDate
+        plan.motivation = motivation
+        plan.updatedAt = .now
+        do {
+            try context.save()
+        } catch {
+            saveMessage = "Your changes could not be saved on this device."
+            return
+        }
+        do {
+            if KeychainStore.readToken() != nil {
+                try await APIClient.shared.save(plan: QuitPlanRequest(
+                    nicotineType: nicotineType,
+                    dailyConsumption: dailyConsumption,
+                    unitCost: unitCost,
+                    quitDate: quitDate,
+                    motivation: motivation,
+                    reminderHour: plan.reminderHour
+                ))
+            }
+            dismiss()
+        } catch {
+            saveMessage = "Saved on this device. The service will update when it is available."
+        }
     }
 }
 
