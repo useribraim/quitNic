@@ -14,6 +14,7 @@ struct CoachingView: View {
     @State private var delayEndsAt: Date?
     @State private var now = Date()
     @State private var showClearConversationConfirmation = false
+    @FocusState private var isComposerFocused: Bool
     let onOpenRescue: () -> Void
     private let prompts = ["I’m having a craving", "Help me plan the next hour", "I feel like I might slip"]
 
@@ -45,6 +46,10 @@ struct CoachingView: View {
                     }
                     .disabled(messages.isEmpty)
                     .accessibilityHint("Removes this conversation from this device")
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { isComposerFocused = false }
                 }
             }
             .confirmationDialog("Clear this chat from this device?", isPresented: $showClearConversationConfirmation, titleVisibility: .visible) {
@@ -86,7 +91,13 @@ struct CoachingView: View {
                 } onRelease: {
                     Task { await finishVoiceInput() }
                 }
-            TextField("What’s happening?", text: $model.draft, axis: .vertical).lineLimit(1...4).padding(.horizontal, 14).padding(.vertical, 11).background(.white, in: RoundedRectangle(cornerRadius: 18)).accessibilityIdentifier("coachInput")
+            TextField("What’s happening?", text: $model.draft, axis: .vertical)
+                .lineLimit(1...4)
+                .focused($isComposerFocused)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
+                .background(.white, in: RoundedRectangle(cornerRadius: 18))
+                .accessibilityIdentifier("coachInput")
             Button { Task { await send() } } label: { Image(systemName: "arrow.up").font(.headline.weight(.bold)).frame(width: 42, height: 42).foregroundStyle(.white).background(QuitNicTheme.actionTeal, in: Circle()) }.accessibilityLabel("Send").disabled(model.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isLoading).opacity(model.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isLoading ? 0.45 : 1)
             }
             .padding(.horizontal, 16)
