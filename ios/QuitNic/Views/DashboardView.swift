@@ -41,18 +41,18 @@ struct DashboardView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     HeaderView(dayNumber: dayNumber, hasStarted: progress.seconds > 0)
-                    MotivationCard(motivation: plan.motivation)
                     TimelineCard(seconds: progress.seconds)
-                    TodayPlanCard(hour: Calendar.current.component(.hour, from: now))
-                    Button(action: onCheckIn) {
-                        Label("I need help now", systemImage: "wind.circle.fill")
-                    }
-                    .buttonStyle(QuitNicPrimaryButtonStyle())
-                    .accessibilityHint("Opens the craving check-in screen")
                     LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 12) {
                         MetricCard(title: "Money saved", value: progress.moneySaved.formatted(.currency(code: "EUR")), icon: "eurosign.circle.fill", tint: QuitNicTheme.teal)
                         MetricCard(title: "Units avoided", value: progress.avoidedUnits.formatted(.number.precision(.fractionLength(0))), icon: "leaf.fill", tint: .green)
                     }
+                    TodayPlanCard(hour: Calendar.current.component(.hour, from: now), recentCheckIn: checkIns.first)
+                    Button(action: onCheckIn) {
+                        Label("Start a Rescue", systemImage: "wind.circle.fill")
+                    }
+                    .buttonStyle(QuitNicPrimaryButtonStyle())
+                    .accessibilityHint("Opens a guided craving check-in")
+                    MotivationCard(motivation: plan.motivation)
                     MilestoneCard(milestone: milestone)
                 }
                 .padding(.horizontal, 20)
@@ -61,13 +61,6 @@ struct DashboardView: View {
             }
             .background(QuitNicTheme.warmBackground.ignoresSafeArea())
             .navigationTitle("Today")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Image(systemName: "leaf.fill")
-                        .foregroundStyle(QuitNicTheme.teal)
-                        .accessibilityHidden(true)
-                }
-            }
         }.task { while !Task.isCancelled { try? await Task.sleep(for: .seconds(60)); now = .now } }
     }
 }
@@ -105,7 +98,7 @@ private struct MotivationCard: View {
                 .foregroundStyle(QuitNicTheme.teal)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 5) {
-                Text("You chose this for")
+                Text("YOUR REASON")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(QuitNicTheme.secondaryInk)
                 Text(motivation)
@@ -121,17 +114,26 @@ private struct MotivationCard: View {
 
 private struct TodayPlanCard: View {
     let hour: Int
+    let recentCheckIn: CravingCheckIn?
 
     private var plan: (title: String, detail: String, icon: String) {
+        if let recentCheckIn {
+            let trigger = recentCheckIn.trigger.lowercased()
+            return (
+                "Plan for \(trigger)",
+                "Your last Rescue used \(recentCheckIn.copingAction.lowercased()). Try that first when this moment returns.",
+                "arrow.trianglehead.2.clockwise.rotate.90"
+            )
+        }
         switch hour {
         case 5..<11:
-            ("Protect your morning", "Before your usual first trigger, drink water and take a two-minute walk.", "sunrise.fill")
+            return ("Protect your morning", "Before your usual first trigger, drink water and take a two-minute walk.", "sunrise.fill")
         case 11..<15:
-            ("After lunch plan", "Before acting on an urge, change location for five minutes and let the wave pass.", "fork.knife")
+            return ("After lunch plan", "Before acting on an urge, change location for five minutes and let the wave pass.", "fork.knife")
         case 15..<20:
-            ("Protect your afternoon", "Keep a simple alternative ready: water, fresh air, or a message to someone supportive.", "figure.walk")
+            return ("Protect your afternoon", "Keep a simple alternative ready: water, fresh air, or a message to someone supportive.", "figure.walk")
         default:
-            ("Ease into tonight", "Set up one small comfort routine now so you do not have to decide during a craving.", "moon.stars.fill")
+            return ("Ease into tonight", "Set up one small comfort routine now so you do not have to decide during a craving.", "moon.stars.fill")
         }
     }
 
