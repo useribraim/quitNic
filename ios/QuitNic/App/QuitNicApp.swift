@@ -17,7 +17,7 @@ struct QuitNicApp: App {
         do { container = try ModelContainer(for: schema, configurations: [configuration]) }
         catch { fatalError("Unable to create local store: \(error.localizedDescription)") }
 
-        if isUITesting && arguments.contains("-ui-testing-seed-progress") {
+        if isUITesting && (arguments.contains("-ui-testing-seed-plan") || arguments.contains("-ui-testing-seed-progress")) {
             let context = ModelContext(container)
             context.insert(QuitPlan(
                 nicotineType: "cigarettes",
@@ -27,13 +27,15 @@ struct QuitNicApp: App {
                 motivation: "More energy and freedom",
                 reminderHour: nil
             ))
-            context.insert(CravingCheckIn(
-                intensity: 5,
-                trigger: "A long craving trigger after morning coffee",
-                copingAction: "A deliberately long walk around the neighbourhood",
-                note: nil,
-                resisted: true
-            ))
+            if arguments.contains("-ui-testing-seed-progress") {
+                context.insert(CravingCheckIn(
+                    intensity: 5,
+                    trigger: "A long craving trigger after morning coffee",
+                    copingAction: "A deliberately long walk around the neighbourhood",
+                    note: nil,
+                    resisted: true
+                ))
+            }
             try? context.save()
         }
     }

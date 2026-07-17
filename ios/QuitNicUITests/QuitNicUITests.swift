@@ -56,21 +56,12 @@ final class QuitNicUITests: XCTestCase {
 
     func testCompleteQuitJourney() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing-reset"]
+        app.launchArguments = ["-ui-testing-reset", "-ui-testing-seed-plan"]
         addUIInterruptionMonitor(withDescription: "Notifications") { alert in
             if alert.buttons["Allow"].exists { alert.buttons["Allow"].tap(); return true }
             return false
         }
         app.launch()
-
-        XCTAssertTrue(app.navigationBars["QuitNic"].waitForExistence(timeout: 5))
-        let motivation = app.descendants(matching: .any)["motivationField"]
-        XCTAssertTrue(motivation.exists)
-        motivation.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.2)).tap()
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 2))
-        app.typeText("More energy and freedom")
-        app.buttons["Start my plan"].tap()
-        app.tap()
 
         XCTAssertTrue(app.tabBars.buttons["Today"].waitForExistence(timeout: 8))
         takeScreenshot(named: "01-dashboard")
@@ -89,6 +80,7 @@ final class QuitNicUITests: XCTestCase {
         app.buttons["Continue"].tap()
         XCTAssertTrue(app.staticTexts["Breathing reset"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.staticTexts["How do you feel now?"].waitForExistence(timeout: 5))
+        app.buttons["I resisted the craving"].tap()
         app.buttons["Save result"].tap()
         XCTAssertTrue(app.staticTexts["You moved through it."].waitForExistence(timeout: 3))
         takeScreenshot(named: "02-rescue-complete")

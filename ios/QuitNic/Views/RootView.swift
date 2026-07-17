@@ -5,10 +5,19 @@ struct RootView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.scenePhase) private var scenePhase
     @Query private var plans: [QuitPlan]
+    @State private var newlyCreatedPlan: QuitPlan?
+
     var body: some View {
         Group {
-            if plans.first == nil { OnboardingView() }
-            else { MainTabView(plan: plans[0]) }
+            if let plan = plans.first ?? newlyCreatedPlan {
+                MainTabView(plan: plan)
+            } else {
+                OnboardingView { plan in
+                    // SwiftData queries update shortly after a save. Keep the hand-off
+                    // explicit so a new person reaches Today immediately, even offline.
+                    newlyCreatedPlan = plan
+                }
+            }
         }
         .task { await OutboxService.flush(context: context) }
         .onChange(of: scenePhase) { _, phase in

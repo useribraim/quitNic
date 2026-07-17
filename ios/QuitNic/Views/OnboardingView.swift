@@ -2,6 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct OnboardingView: View {
+    let onPlanCreated: (QuitPlan) -> Void
     @Environment(\.modelContext) private var context
     @State private var nicotineType = "cigarettes"
     @State private var dailyConsumption = 10.0
@@ -12,13 +13,19 @@ struct OnboardingView: View {
     @State private var reminderHour = 20
     @State private var isSaving = false
     @State private var warning: String?
+    @State private var completedPlan: QuitPlan?
 
     private var canStart: Bool {
         !isSaving && !motivation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
-        NavigationStack {
+        if let completedPlan {
+            // Local persistence is the completion boundary. Registration and sync are
+            // deliberately non-blocking so a new plan is useful immediately offline.
+            MainTabView(plan: completedPlan)
+        } else {
+            NavigationStack {
             Form {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
@@ -78,7 +85,7 @@ struct OnboardingView: View {
                 .headerProminence(.increased)
                 if let warning { Text(warning).foregroundStyle(.orange).accessibilityLabel("Connection warning: \(warning)") }
                 Button {
-                    Task { await save() }
+                    save()
                 } label: {
                     HStack {
                         Text(isSaving ? "Saving…" : "Start my plan")
@@ -101,21 +108,42 @@ struct OnboardingView: View {
             .scrollContentBackground(.hidden)
             .background(QuitNicTheme.warmBackground)
             .navigationTitle("QuitNic")
+            }
         }
     }
 
-    @MainActor private func save() async {
+    @MainActor private func save() {
         isSaving = true; warning = nil
         let plan = QuitPlan(nicotineType: nicotineType, dailyConsumption: dailyConsumption, unitCost: unitCost, quitDate: quitDate, motivation: motivation, reminderHour: reminders ? reminderHour : nil)
-        context.insert(plan); try? context.save()
-        if reminders { try? await NotificationService.scheduleDaily(hour: reminderHour) }
-        do {
-            if KeychainStore.readToken() == nil { let registration = try await APIClient.shared.register(); try KeychainStore.saveToken(registration.accessToken) }
-            try await APIClient.shared.save(plan: QuitPlanRequest(nicotineType: nicotineType, dailyConsumption: dailyConsumption, unitCost: unitCost, quitDate: quitDate, motivation: motivation, reminderHour: reminders ? reminderHour : nil))
-        } catch {
-            try? OutboxService.enqueue(plan: plan, context: context)
-            warning = "Your plan is saved on this device and will connect when the service is available."
+        context.insert(plan)
+        do { try context.save() }
+        catch {
+            isSaving = false
+            warning = "Your plan could not be saved on this device. Please try again."
+            return
         }
         isSaving = false
+        completedPlan = plan
+        onPlanCreated(plan)
+
+        Task { @MainActor in
+            if reminders { try? await NotificationService.scheduleDaily(hour: reminderHour) }
+            do {
+                if KeychainStore.readToken() == nil {
+                    let registration = try await APIClient.shared.register()
+                    try KeychainStore.saveToken(registration.accessToken)
+                }
+                try await APIClient.shared.save(plan: QuitPlanRequest(
+                    nicotineType: nicotineType,
+                    dailyConsumption: dailyConsumption,
+                    unitCost: unitCost,
+                    quitDate: quitDate,
+                    motivation: motivation,
+                    reminderHour: reminders ? reminderHour : nil
+                ))
+            } catch {
+                try? OutboxService.enqueue(plan: plan, context: context)
+            }
+        }
     }
 }
