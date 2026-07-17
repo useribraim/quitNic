@@ -28,6 +28,7 @@ struct SettingsView: View {
     @State private var showPrivacyDetails = false
     @State private var showPlanEditor = false
     @State private var errorMessage: String?
+    @State private var reminderMessage: String?
 #if DEBUG
     @AppStorage("debugAPIURL") private var debugAPIURL = ""
     @State private var serviceStatus = "Not checked"
@@ -56,6 +57,11 @@ struct SettingsView: View {
                         }
                     }
                     Button("Apply reminder") { Task { await applyReminder() } }
+                    if let reminderMessage {
+                        Label(reminderMessage, systemImage: "checkmark.circle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(QuitNicTheme.teal)
+                    }
                     LabeledContent("Permission", value: notificationStatusText)
                         .foregroundStyle(notificationStatus == .denied ? .orange : QuitNicTheme.secondaryInk)
                     if notificationStatus == .denied {
@@ -145,10 +151,20 @@ struct SettingsView: View {
     }
 
     private func applyReminder() async {
+        reminderMessage = nil
         plan.reminderHour = reminderEnabled ? reminderHour : nil
         try? context.save()
-        if reminderEnabled { try? await NotificationService.scheduleDaily(hour: reminderHour) }
-        else { NotificationService.removeAll() }
+        if reminderEnabled {
+            do {
+                try await NotificationService.scheduleDaily(hour: reminderHour)
+                reminderMessage = "Daily check-in set for \(String(format: "%02d:00", reminderHour))."
+            } catch {
+                reminderMessage = "Reminder could not be scheduled. Check notification permission."
+            }
+        } else {
+            NotificationService.removeAll()
+            reminderMessage = "Daily check-in turned off."
+        }
         do {
             if KeychainStore.readToken() != nil {
                 try await APIClient.shared.save(plan: QuitPlanRequest(

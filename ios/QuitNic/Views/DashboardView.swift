@@ -41,7 +41,7 @@ struct DashboardView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     HeaderView(dayNumber: dayNumber, hasStarted: progress.seconds > 0)
-                    TimelineCard(seconds: progress.seconds)
+                    TimelineCard(seconds: progress.seconds, quitDate: plan.quitDate, now: now)
                     LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 12) {
                         MetricCard(title: "Money saved", value: progress.moneySaved.formatted(.currency(code: "EUR")), icon: "eurosign.circle.fill", tint: QuitNicTheme.teal)
                         MetricCard(title: "Units avoided", value: progress.avoidedUnits.formatted(.number.precision(.fractionLength(0))), icon: "leaf.fill", tint: .green)
@@ -165,10 +165,20 @@ private struct TodayPlanCard: View {
 
 private struct TimelineCard: View {
     let seconds: Int
+    let quitDate: Date
+    let now: Date
+
+    private var hasStarted: Bool { now >= quitDate }
+    private var displayedSeconds: Int {
+        hasStarted ? seconds : max(0, Int(quitDate.timeIntervalSince(now)))
+    }
+
     var body: some View {
-        let days = seconds / 86_400, hours = (seconds % 86_400) / 3600, minutes = (seconds % 3600) / 60
+        let days = displayedSeconds / 86_400
+        let hours = (displayedSeconds % 86_400) / 3600
+        let minutes = (displayedSeconds % 3600) / 60
         VStack(alignment: .leading, spacing: 10) {
-            Label("Nicotine-free time", systemImage: "clock.fill")
+            Label(hasStarted ? "Nicotine-free time" : "Your quit starts in", systemImage: hasStarted ? "clock.fill" : "calendar.badge.clock")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.white)
             Text("\(days)d  \(hours)h  \(minutes)m")
