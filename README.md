@@ -8,11 +8,11 @@ QuitNic is a privacy-conscious native iOS nicotine-quit coach backed by a Python
 - **Offline data integration:** cached progress plus a persistent outbox with idempotency keys, retry classification, relaunch recovery and duplicate-delivery protection.
 - **Backend service:** FastAPI, typed Pydantic contracts, SQLAlchemy relational models, Alembic migrations, PostgreSQL and opaque bearer-token authentication with only token hashes persisted.
 - **AI safety boundary:** provider-isolated OpenAI adapter, deterministic development provider, bounded context and a fixed urgent-language escalation path.
-- **Engineering quality:** 11 backend tests, 17 iOS unit tests and four signed Simulator UI tests, including whole-journey accessibility audits and accessibility-XXXL layout checks, with client-server GitHub Actions and PostgreSQL migration coverage.
+- **Engineering quality:** backend contract tests, iOS unit tests and signed Simulator journeys cover the core quit loop, offline retry, correction/deletion, accessibility audits and accessibility-XXXL layouts, with client-server GitHub Actions and PostgreSQL migration coverage.
 
 ## Current verification
 
-The complete backend check (`ruff`, `mypy`, and `pytest`) passes. The full iOS suite passes on an iPhone 16 Pro Simulator: 17 unit tests plus four UI tests covering whole-journey accessibility, accessibility-XXXL onboarding and progress layouts, persistence, check-in synchronization, normal coaching, the urgent-language safety response, and server-backed account deletion returning to onboarding. The non-root Docker image builds, applies its schema migration and returns a healthy runtime response.
+The latest focused verification passes on an iPhone 16 Pro Simulator for the canonical Today/Journey loop, Quick Log draft recovery, Accessibility XXXL keyboard use, history correction/deletion, calm offline status and ordinary-log Undo. Backend API tests pass for idempotent create/update/delete, and the iOS outbox tests pass for replacement and retry-safe deletion. Simulator performance baselines are documented in `docs/performance-baselines.md`. The non-root Docker image builds, applies its schema migration and returns a healthy runtime response.
 
 See [the architecture](docs/architecture.md), [API contract](docs/api.md), [test matrix](docs/testing.md), and [deployment design](docs/deployment.md) for implementation details.
 
@@ -56,7 +56,7 @@ xcodegen generate
 open QuitNic.xcodeproj
 ```
 
-The Debug build defaults to `http://localhost:8000`. Replace the Release `QUITNIC_API_URL` setting in `ios/project.yml` with the HTTPS production endpoint before generating a release candidate. Replace the example bundle identifier and select your signing team before device distribution.
+The Debug build defaults to `http://localhost:8000`. Release builds use the HTTPS App Runner endpoint configured in `ios/project.yml`. Before each new upload, verify that endpoint and the full anonymous-account lifecycle from the signed archive on a physical device, and confirm the bundle identifier and signing team match the App Store Connect record.
 
 ## Security
 
@@ -64,4 +64,6 @@ Access tokens are random opaque values stored in iOS Keychain; the database stor
 
 ## Release status
 
-The project is a verified local release candidate. Replace the production endpoint and example bundle identifier before release. See [the TestFlight checklist](docs/testflight.md) for the remaining account-dependent work.
+As of September 2026, Apple has approved QuitNic 1.0.0 through Beta App Review, and the build is distributed to external testers through TestFlight. Request tester access at [ibraim.ie/quitNic](https://ibraim.ie/quitNic).
+
+The [TestFlight checklist](docs/testflight.md) records the release procedure for subsequent builds. Remaining product work is tracked in `docs/product-improvement-audit.md`.
