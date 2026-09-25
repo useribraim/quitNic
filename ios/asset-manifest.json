@@ -1,0 +1,12 @@
+{
+  "total_max_bytes": 6250000,
+  "assets": {
+    "AppIcon.appiconset/AppIcon-Horizon-v2-1024.png": 1800000,
+    "HorizonHouse.imageset/house.jpg": 850000,
+    "HorizonLand.imageset/horizon-land-clean.jpg": 700000,
+    "HorizonNewHorizon.imageset/newhorizon.jpg": 650000,
+    "HorizonOverlook.imageset/overlook.jpg": 775000,
+    "HorizonRidge.imageset/ridge.jpg": 825000,
+    "HorizonValley.imageset/valley.jpg": 675000
+  }
+}

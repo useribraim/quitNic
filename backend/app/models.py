@@ -46,6 +46,7 @@ class QuitPlan(Base):
     quit_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     motivation: Mapped[str] = mapped_column(Text, default="")
     reminder_hour: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    currency_code: Mapped[str] = mapped_column(String(3), default="USD", server_default="USD")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow
     )

@@ -1,0 +1,13 @@
+No login credentials are required. QuitNic creates an anonymous device account when a network feature is first used.
+
+To test the main flow:
+1. Complete onboarding with any non-empty motivation.
+2. On Today, tap “I have a craving” to start Rescue.
+3. Continue to check-in, choose a trigger and outcome, then save the result.
+4. Open Journey to review nicotine-free checkpoints.
+5. Open Coach to send a behavioural-support message.
+6. Open Settings to delete coaching history or the anonymous account and local data.
+
+Core tracking works offline. Coach requires the production service. QuitNic provides general behavioural support and educational information; it does not diagnose, prescribe treatment, or replace a clinician. Urgent-language handling directs the user to local emergency and crisis services.
+
+The app uses operating-system HTTPS and Keychain services and declares ITSAppUsesNonExemptEncryption = NO.

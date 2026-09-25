@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: QuitNic production API, private PostgreSQL, secrets, and alarms
 Parameters:
   VpcId: {Type: AWS::EC2::VPC::Id}
-  PrivateSubnetIds: {Type: List<AWS::EC2::Subnet::Id}
+  PrivateSubnetIds: {Type: List<AWS::EC2::Subnet::Id>}
   ImageIdentifier: {Type: String, Description: Full ECR image URI including an immutable tag}
   DatabaseName: {Type: String, Default: quitnic}
   DatabaseUsername: {Type: String, Default: quitnic}
@@ -17,6 +17,10 @@ Parameters:
     Type: String
     NoEcho: true
     MinLength: 32
+  ServiceName:
+    Type: String
+    Default: quitnic-api
+    Description: App Runner service name, also used as the CloudWatch alarm dimension
 Resources:
   DatabaseSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -36,7 +40,11 @@ Resources:
     UpdateReplacePolicy: Snapshot
     Properties:
       Engine: postgres
-      EngineVersion: "16.3"
+      # RDS retires minor versions: 16.3 was withdrawn and the stack failed early
+      # validation with no usable detail. Check `aws rds describe-db-engine-versions
+      # --engine postgres` before changing this.
+      EngineVersion: "16.14"
+      AutoMinorVersionUpgrade: true
       DBInstanceClass: db.t4g.micro
       AllocatedStorage: 20
       MaxAllocatedStorage: 100
@@ -72,6 +80,10 @@ Resources:
     Type: AWS::AppRunner::Service
     DependsOn: Database
     Properties:
+      # Named explicitly because AWS::AppRunner::Service does not expose ServiceName via
+      # Fn::GetAtt (only ServiceArn, ServiceId, ServiceUrl and Status), and the CloudWatch
+      # alarms below need the name as a metric dimension.
+      ServiceName: !Ref ServiceName
       SourceConfiguration:
         AutoDeploymentsEnabled: false
         AuthenticationConfiguration: {AccessRoleArn: !GetAtt AccessRole.Arn}
@@ -80,11 +92,20 @@ Resources:
           ImageRepositoryType: ECR
           ImageConfiguration:
             Port: "8000"
-            RuntimeEnvironmentVariables: {ENVIRONMENT: production, OPENAI_MODEL: gpt-4.1-mini}
+            # COACHING_PROVIDER is pinned rather than left to "auto": auto silently falls
+            # back to the deterministic offline coach if the key is ever missing, which
+            # would ship canned replies to real users. "openai" fails loudly instead.
+            # These are Lists of {Name, Value} pairs, NOT maps. The map form is accepted by
+            # `validate-template` but rejected later by AWS::EarlyValidation::PropertyValidation
+            # with no usable detail, which is a slow failure to diagnose.
+            RuntimeEnvironmentVariables:
+              - {Name: ENVIRONMENT, Value: production}
+              - {Name: OPENAI_MODEL, Value: gpt-5.4-mini}
+              - {Name: COACHING_PROVIDER, Value: openai}
             RuntimeEnvironmentSecrets:
-              DATABASE_URL: !Sub "${RuntimeSecret}:DATABASE_URL::"
-              OPENAI_API_KEY: !Sub "${RuntimeSecret}:OPENAI_API_KEY::"
-              TOKEN_PEPPER: !Sub "${RuntimeSecret}:TOKEN_PEPPER::"
+              - {Name: DATABASE_URL, Value: !Sub "${RuntimeSecret}:DATABASE_URL::"}
+              - {Name: OPENAI_API_KEY, Value: !Sub "${RuntimeSecret}:OPENAI_API_KEY::"}
+              - {Name: TOKEN_PEPPER, Value: !Sub "${RuntimeSecret}:TOKEN_PEPPER::"}
       InstanceConfiguration: {Cpu: "1 vCPU", Memory: "2 GB", InstanceRoleArn: !GetAtt InstanceRole.Arn}
       NetworkConfiguration: {EgressConfiguration: {EgressType: VPC, VpcConnectorArn: !GetAtt VpcConnector.VpcConnectorArn}}
       HealthCheckConfiguration: {Protocol: HTTP, Path: /health, Interval: 10, Timeout: 5, HealthyThreshold: 1, UnhealthyThreshold: 5}
@@ -94,7 +115,7 @@ Resources:
       AlarmDescription: QuitNic API elevated 5xx responses
       Namespace: AWS/AppRunner
       MetricName: 5xxStatusResponses
-      Dimensions: [{Name: ServiceName, Value: !GetAtt Service.ServiceName}]
+      Dimensions: [{Name: ServiceName, Value: !Ref ServiceName}]
       Statistic: Sum
       Period: 300
       EvaluationPeriods: 1
@@ -107,7 +128,7 @@ Resources:
       AlarmDescription: QuitNic API p95 latency above two seconds
       Namespace: AWS/AppRunner
       MetricName: RequestLatency
-      Dimensions: [{Name: ServiceName, Value: !GetAtt Service.ServiceName}]
+      Dimensions: [{Name: ServiceName, Value: !Ref ServiceName}]
       ExtendedStatistic: p95
       Period: 300
       EvaluationPeriods: 2

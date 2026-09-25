@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  QuitNic private networking. The default VPC ships with public subnets only, but the
+  API runs with App Runner EgressType=VPC so that PostgreSQL can stay unreachable from
+  the internet. That routes every outbound call — including OpenAI — through the VPC,
+  which needs a NAT gateway. Without this stack the service starts but every coaching
+  request hangs until it times out.
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Existing VPC to add private subnets to
+  PrivateSubnetACidr:
+    Type: String
+    Default: 172.31.48.0/20
+    Description: Must not overlap an existing subnet in the VPC
+  PrivateSubnetBCidr:
+    Type: String
+    Default: 172.31.64.0/20
+  PublicSubnetForNat:
+    Type: AWS::EC2::Subnet::Id
+    Description: An existing public subnet; the NAT gateway lives here
+
+Resources:
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VpcId
+      CidrBlock: !Ref PrivateSubnetACidr
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags: [{Key: Name, Value: quitnic-private-a}]
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VpcId
+      CidrBlock: !Ref PrivateSubnetBCidr
+      # RDS subnet groups require two AZs, so this is not optional even though the
+      # database itself is single-AZ for the beta.
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags: [{Key: Name, Value: quitnic-private-b}]
+
+  NatEip:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags: [{Key: Name, Value: quitnic-nat}]
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatEip.AllocationId
+      SubnetId: !Ref PublicSubnetForNat
+      Tags: [{Key: Name, Value: quitnic-nat}]
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VpcId
+      Tags: [{Key: Name, Value: quitnic-private}]
+
+  DefaultPrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnetARouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: {RouteTableId: !Ref PrivateRouteTable, SubnetId: !Ref PrivateSubnetA}
+
+  PrivateSubnetBRouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: {RouteTableId: !Ref PrivateRouteTable, SubnetId: !Ref PrivateSubnetB}
+
+Outputs:
+  PrivateSubnetIds:
+    Description: Pass straight into the app-runner-rds stack's PrivateSubnetIds parameter
+    Value: !Join [",", [!Ref PrivateSubnetA, !Ref PrivateSubnetB]]
+  NatEipAddress:
+    Description: Stable public IP all outbound API traffic now originates from
+    Value: !Ref NatEip

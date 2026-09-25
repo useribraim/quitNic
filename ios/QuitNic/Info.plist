@@ -18,20 +18,42 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.ibraimabduramanov.QuitNic.navigation</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>quitnic</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>QuitNic uses the microphone only while you hold Push to Talk to turn your words into a coaching message.</string>
+	<string>QuitNic uses the microphone while you are talking to Coach, either holding Push to Talk or in a hands-free conversation. Recording stops when you leave the screen.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>QuitNic uses on-device speech recognition to turn Push to Talk into text without sending your voice to a server.</string>
+	<string>QuitNic uses on-device speech recognition to turn what you say into text for Coach. Your speech stays on this iPhone unless you choose enhanced cloud transcription.</string>
 	<key>QuitNicAPIURL</key>
 	<string>$(QUITNIC_API_URL)</string>
 	<key>UILaunchScreen</key>
-	<dict/>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Satoshi-Variable.ttf</string>
+	</array>
 </dict>
 </plist>

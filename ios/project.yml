@@ -1,6 +1,6 @@
 name: QuitNic
 options:
-  bundleIdPrefix: com.example
+  bundleIdPrefix: com.ibraimabduramanov
   deploymentTarget:
     iOS: "17.0"
 settings:
@@ -8,6 +8,9 @@ settings:
     SWIFT_VERSION: "5.10"
     CURRENT_PROJECT_VERSION: 1
     MARKETING_VERSION: 1.0.0
+    # Required to run on a physical iPhone. Automatic signing needs a team to
+    # register the App ID and issue a provisioning profile against.
+    DEVELOPMENT_TEAM: SSKQ9XATM6
 targets:
   QuitNic:
     type: application
@@ -15,21 +18,42 @@ targets:
     sources: [QuitNic]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.QuitNic
+        PRODUCT_BUNDLE_IDENTIFIER: com.ibraimabduramanov.QuitNic
         CODE_SIGN_STYLE: Automatic
+        # Version 1.0 is deliberately iPhone-only. Native iPad support needs its
+        # own layouts, orientation coverage, and App Store screenshots rather
+        # than shipping a scaled, unverified phone experience.
+        TARGETED_DEVICE_FAMILY: 1
       configs:
         Debug:
           QUITNIC_API_URL: http://localhost:8000
         Release:
-          QUITNIC_API_URL: https://replace-with-app-runner-url.example
+          QUITNIC_API_URL: https://3yhhdy4yvi.eu-west-1.awsapprunner.com
     info:
       path: QuitNic/Info.plist
       properties:
         CFBundleDisplayName: QuitNic
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # QuitNic uses only operating-system encryption (URLSession HTTPS and Keychain),
+        # not proprietary or non-exempt cryptography.
+        ITSAppUsesNonExemptEncryption: false
+        CFBundleURLTypes:
+          - CFBundleTypeRole: Editor
+            CFBundleURLName: com.ibraimabduramanov.QuitNic.navigation
+            CFBundleURLSchemes: [quitnic]
         QuitNicAPIURL: $(QUITNIC_API_URL)
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
-        UILaunchScreen: {}
+        # Push to Talk records audio and (in on-device mode) runs speech recognition.
+        # iOS terminates the process the moment either permission is requested without
+        # a usage string here, so these are load-bearing, not paperwork.
+        NSMicrophoneUsageDescription: QuitNic uses the microphone only while you hold Push to Talk, so you can speak to Coach instead of typing.
+        NSSpeechRecognitionUsageDescription: QuitNic uses on-device speech recognition to turn what you say into text for Coach. Your speech stays on this iPhone unless you choose enhanced cloud transcription.
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UIAppFonts:
+          - Satoshi-Variable.ttf
     scheme:
       testTargets: [QuitNicTests, QuitNicUITests]
   QuitNicTests:

@@ -60,6 +60,55 @@ final class APIClientTests: XCTestCase {
         }
     }
 
+    // MARK: - Voice upload
+
+    /// The recorder writes AAC in an MPEG-4 container. It previously wrote raw float32
+    /// PCM to a file named `.m4a` and declared `audio/m4a`, so the bytes, the extension
+    /// and the content type all disagreed and no decoder could read the result.
+    func testUploadDeclaresTheContainerTypeItActuallySends() {
+        XCTAssertEqual(APIClient.mimeType(forPathExtension: "m4a"), "audio/mp4")
+        XCTAssertEqual(APIClient.mimeType(forPathExtension: "M4A"), "audio/mp4")
+        XCTAssertEqual(APIClient.mimeType(forPathExtension: "wav"), "audio/wav")
+        XCTAssertEqual(APIClient.mimeType(forPathExtension: "bin"), "application/octet-stream")
+    }
+
+    func testOversizedRecordingIsRejectedBeforeAnyRequestIsMade() async throws {
+        let url = FileManager.default.temporaryDirectory.appending(path: "oversized-\(UUID().uuidString).m4a")
+        // One byte past the ceiling, written sparsely so the test stays cheap.
+        let handle = try {
+            FileManager.default.createFile(atPath: url.path, contents: nil)
+            return try FileHandle(forWritingTo: url)
+        }()
+        try handle.truncate(atOffset: UInt64(APIClient.maximumUploadBytes + 1))
+        try handle.close()
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let attempted = Counter()
+        MockURLProtocol.handler = { request in
+            _ = attempted.next()
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, Data())
+        }
+
+        do {
+            _ = try await makeClient().transcribe(audioURL: url)
+            XCTFail("Expected the upload to be refused")
+        } catch let error as APIError {
+            XCTAssertEqual(error, .recordingTooLong)
+        }
+        XCTAssertEqual(attempted.next(), 0)
+    }
+
+    func testAnAbandonedUploadIsNotRetriedByTheOutbox() {
+        // A body the server cannot accept will be rejected identically forever.
+        XCTAssertFalse(APIError.recordingTooLong.isTransient)
+        XCTAssertFalse(APIError.unauthorized.isTransient)
+        XCTAssertFalse(APIError.decoding.isTransient)
+        XCTAssertFalse(APIError.server(422).isTransient)
+        XCTAssertTrue(APIError.server(503).isTransient)
+        XCTAssertTrue(APIError.rateLimited.isTransient)
+        XCTAssertTrue(APIError.transport("offline").isTransient)
+    }
+
     private func makeClient() -> APIClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]

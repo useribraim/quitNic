@@ -44,6 +44,7 @@ class QuitPlanInput(BaseModel):
     quit_date: UTCDateTime
     motivation: str = Field(default="", max_length=500)
     reminder_hour: int | None = Field(default=None, ge=0, le=23)
+    currency_code: str = Field(default="USD", min_length=3, max_length=3)
 
 
 class QuitPlanOutput(QuitPlanInput):
@@ -80,6 +81,9 @@ class ConversationTurn(BaseModel):
 class CoachingRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
     recent_context: list[ConversationTurn] = Field(default_factory=list, max_length=10)
+    # "voice" replies are spoken aloud by the app, so they must be short enough to listen
+    # to and free of anything that only works on a screen.
+    style: Literal["chat", "voice"] = "chat"
 
 
 class CoachingResponse(BaseModel):

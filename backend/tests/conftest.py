@@ -5,6 +5,11 @@ from pathlib import Path
 # local runs default to a throwaway SQLite file.
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./test-quitnic.db")
 os.environ["TOKEN_PEPPER"] = "test-pepper"
+# Isolate coaching config from a developer's local .env: the suite must behave the
+# same whether or not a real OPENAI_API_KEY happens to be configured on this machine.
+os.environ["ENVIRONMENT"] = "development"
+os.environ["COACHING_PROVIDER"] = "auto"
+os.environ["OPENAI_API_KEY"] = ""
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient

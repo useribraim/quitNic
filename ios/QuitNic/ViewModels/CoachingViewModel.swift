@@ -11,6 +11,10 @@ final class CoachingViewModel {
     var requiresReconnect = false
     private(set) var lastFailedMessage: String?
 
+    /// A local-first plan may never have registered, so "your session expired" would be
+    /// untrue for a brand-new person. Distinguish first connection from reconnection.
+    var hasEverConnected: Bool { AuthService.shared.existingToken() != nil }
+
     func send(messages: [ChatMessage], save: (ChatMessage) -> Void) async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isLoading else { return }
@@ -36,25 +40,8 @@ final class CoachingViewModel {
         guard let lastFailedMessage, !isLoading else { return }
         errorMessage = nil; isLoading = true
         do {
-            let registration = try await APIClient.shared.register()
-            do {
-                try KeychainStore.saveToken(registration.accessToken)
-            } catch {
-                requiresReconnect = true
-                errorMessage = (error as? LocalizedError)?.errorDescription ?? "QuitNic could not securely save your private session. Please restart the app and try again."
-                isLoading = false
-                return
-            }
+            try await SyncCoordinator.reconnect(plan: plan, context: context)
             requiresReconnect = false
-            try await APIClient.shared.save(plan: QuitPlanRequest(
-                nicotineType: plan.nicotineType,
-                dailyConsumption: plan.dailyConsumption,
-                unitCost: plan.unitCost,
-                quitDate: plan.quitDate,
-                motivation: plan.motivation,
-                reminderHour: plan.reminderHour
-            ))
-            try await restoreLocalCheckIns(context: context)
             await requestResponse(for: lastFailedMessage, messages: Array(messages.dropLast()), save: save)
         } catch {
             requiresReconnect = (error as? APIError) == .unauthorized
@@ -71,27 +58,13 @@ final class CoachingViewModel {
             lastFailedMessage = nil
         } catch {
             lastFailedMessage = text
-            requiresReconnect = (error as? APIError) == .unauthorized
-            errorMessage = (error as? LocalizedError)?.errorDescription ?? "Coaching is unavailable."
+            let needsSession = (error as? APIError) == .unauthorized
+            requiresReconnect = needsSession
+            if needsSession && !hasEverConnected {
+                errorMessage = "Coach needs a one-time private connection before it can reply. Your plan and history stay on this device."
+            } else {
+                errorMessage = (error as? LocalizedError)?.errorDescription ?? "Coaching is unavailable."
+            }
         }
-    }
-
-    private func restoreLocalCheckIns(context: ModelContext) async throws {
-        let checkIns = try context.fetch(FetchDescriptor<CravingCheckIn>(sortBy: [SortDescriptor(\.occurredAt)]))
-        for checkIn in checkIns {
-            let request = CheckInRequest(
-                intensity: checkIn.intensity,
-                trigger: checkIn.trigger,
-                copingAction: checkIn.copingAction,
-                note: checkIn.note,
-                resisted: checkIn.resisted,
-                usedNicotine: checkIn.usedNicotine,
-                occurredAt: checkIn.occurredAt
-            )
-            _ = try await APIClient.shared.post(checkIn: request, idempotencyKey: checkIn.id.uuidString)
-            checkIn.synced = true
-        }
-        try context.save()
-        await OutboxService.flush(context: context)
     }
 }
